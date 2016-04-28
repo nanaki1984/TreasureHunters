@@ -24,8 +24,8 @@ Server runs at 20Hz, game at 60Hz
 
 extern "C"
 {
-    Core::GameInstance *gameInstance = nullptr;
-    char gameInstanceBuffer[sizeof(Core::GameInstance)];
+    Network::ClientInstance *clientInstance = nullptr;
+    char clientInstanceBuffer[sizeof(Network::ClientInstance)];
 
     bool EXPORT_API GameInit(const char *serverHost, int serverPort, Core::Log::LogFunction debugLog)
     {
@@ -36,47 +36,47 @@ extern "C"
         Core::Memory::InitAllocator<BlocksAllocator>(&GetAllocator<MallocAllocator>(), 8192);
         Core::Memory::InitAllocator<ScratchAllocator>(&GetAllocator<MallocAllocator>(), 512 * 1024);
 
-        gameInstance = new(gameInstanceBuffer) Core::GameInstance();
+        clientInstance = new(clientInstanceBuffer) Network::ClientInstance();
         Core::Log::Instance()->SetCallback(debugLog);
 
-        return gameInstance->Initialize(serverHost, serverPort);
+        return clientInstance->Initialize(serverHost, serverPort);
     }
 
     void EXPORT_API GameTick()
     {
-        gameInstance->Tick();
+        clientInstance->Tick();
     }
 
     void EXPORT_API GameSendInput(float x, float y)
-    {
+    {/*
         auto plaInputs = SmartPtr<Game::PlayerInputs>::MakeNew<BlocksAllocator>();
         plaInputs->t = gameInstance->GetPlayer()->GetT();
         plaInputs->x = x;
         plaInputs->y = y;
-        gameInstance->Send(plaInputs);
+        gameInstance->Send(plaInputs);*/
     }
 
     void EXPORT_API GameReceivePosition(float *x, float *y)
-    {
+    {/*
         *x = gameInstance->GetPlayer()->GetX();
-        *y = gameInstance->GetPlayer()->GetY();
+        *y = gameInstance->GetPlayer()->GetY();*/
     }
 
     void EXPORT_API GamePause()
     {
-        gameInstance->RequestPause();
+        clientInstance->RequestPause();
     }
 
     void EXPORT_API GameResume()
     {
-        gameInstance->RequestResume();
+        clientInstance->RequestResume();
     }
 
     void EXPORT_API GameQuit()
     {
-        gameInstance->RequestQuit();
-        gameInstance->~GameInstance();
-        gameInstance = nullptr;
+        clientInstance->RequestQuit();
+        clientInstance->~ClientInstance();
+        clientInstance = nullptr;
 
         Core::Memory::ShutdownMemory();
     }

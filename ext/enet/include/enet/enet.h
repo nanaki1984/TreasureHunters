@@ -230,6 +230,7 @@ enum
    ENET_PEER_TIMEOUT_MINIMUM              = 5000,
    ENET_PEER_TIMEOUT_MAXIMUM              = 30000,
    ENET_PEER_PING_INTERVAL                = 500,
+   ENET_PEER_PING_TIMES_ARRAY_SIZE        = 5,
    ENET_PEER_UNSEQUENCED_WINDOWS          = 64,
    ENET_PEER_UNSEQUENCED_WINDOW_SIZE      = 1024,
    ENET_PEER_FREE_UNSEQUENCED_WINDOWS     = 32,
@@ -249,6 +250,12 @@ typedef struct _ENetChannel
    ENetList     incomingReliableCommands;
    ENetList     incomingUnreliableCommands;
 } ENetChannel;
+
+typedef struct _ENetPingTime
+{
+    enet_uint32 roundTripTime;
+    enet_uint32 clockDifferential;
+} ENetPingTime;
 
 /**
  * An ENet peer which data packets may be sent or received from. 
@@ -301,6 +308,8 @@ typedef struct _ENetPeer
    enet_uint32   highestRoundTripTimeVariance;
    enet_uint32   roundTripTime;            /**< mean round trip time (RTT), in milliseconds, between sending a reliable packet and receiving its acknowledgement */
    enet_uint32   roundTripTimeVariance;
+   ENetPingTime  pingTimes[ENET_PEER_PING_TIMES_ARRAY_SIZE]; /**< RTT & clock differential, in milliseconds, of the last ENET_PEER_PING_TIMES_ARRAY_SIZE pings */
+   enet_uint16   pingTimesCounter;
    enet_uint32   mtu;
    enet_uint32   windowSize;
    enet_uint32   reliableDataInTransit;

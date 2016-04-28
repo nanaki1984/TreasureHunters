@@ -80,6 +80,7 @@ typedef struct _ENetProtocolAcknowledge
    ENetProtocolCommandHeader header;
    enet_uint16 receivedReliableSequenceNumber;
    enet_uint16 receivedSentTime;
+   enet_uint32 clock;
 } ENET_PACKED ENetProtocolAcknowledge;
 
 typedef struct _ENetProtocolConnect

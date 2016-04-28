@@ -3,7 +3,7 @@
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/BlocksAllocator.h"
 #include "Core/Memory/ScratchAllocator.h"
-#include "Core/GameInstance.h"
+#include "Network/ServerInstance.h"
 
 #include "Managers/GetManager.h"
 
@@ -19,12 +19,12 @@ int main(int argc, char **argv) {
     InitAllocator<ScratchAllocator>(&GetAllocator<MallocAllocator>(), 512 * 1024);
 
 	{
-		Core::GameInstance gameInstance;
-        if (gameInstance.Initialize(nullptr, 1234))
+		Network::ServerInstance serverInstance;
+        if (serverInstance.Initialize(1234))
         {
             while (true)
             {
-                gameInstance.Tick();
+                serverInstance.Tick();
 
                 Sleep(33); // 30 HZ?
             }

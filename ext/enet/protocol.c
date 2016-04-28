@@ -826,6 +826,7 @@ enet_protocol_handle_disconnect (ENetHost * host, ENetPeer * peer, const ENetPro
 static int
 enet_protocol_handle_acknowledge (ENetHost * host, ENetEvent * event, ENetPeer * peer, const ENetProtocol * command)
 {
+    ENetPingTime * pingTime;
     enet_uint32 roundTripTime,
            receivedSentTime,
            receivedReliableSequenceNumber;
@@ -846,6 +847,12 @@ enet_protocol_handle_acknowledge (ENetHost * host, ENetEvent * event, ENetPeer *
     peer -> earliestTimeout = 0;
 
     roundTripTime = ENET_TIME_DIFFERENCE (host -> serviceTime, receivedSentTime);
+
+    pingTime = peer -> pingTimes + peer -> pingTimesCounter++;
+    if ( ENET_PEER_PING_TIMES_ARRAY_SIZE == peer -> pingTimesCounter )
+      peer -> pingTimesCounter = 0;
+    pingTime -> roundTripTime = roundTripTime;
+    pingTime -> clockDifferential = ENET_NET_TO_HOST_32(command -> acknowledge.clock) - (host -> serviceTime - (roundTripTime >> 1));
 
     enet_peer_throttle (peer, roundTripTime);
 
@@ -1294,6 +1301,7 @@ enet_protocol_send_acknowledgements (ENetHost * host, ENetPeer * peer)
        command -> header.reliableSequenceNumber = reliableSequenceNumber;
        command -> acknowledge.receivedReliableSequenceNumber = reliableSequenceNumber;
        command -> acknowledge.receivedSentTime = ENET_HOST_TO_NET_16 (acknowledgement -> sentTime);
+       command -> acknowledge.clock = ENET_HOST_TO_NET_32 (host -> serviceTime);
   
        if ((acknowledgement -> command.header.command & ENET_PROTOCOL_COMMAND_MASK) == ENET_PROTOCOL_COMMAND_DISCONNECT)
          enet_protocol_dispatch_state (host, peer, ENET_PEER_STATE_ZOMBIE);

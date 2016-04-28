@@ -69,7 +69,7 @@ SmartPtr<T>::SmartPtr(SmartPtr<T> &&p)
 }
 
 template <class T>
-SmartPtr<T>::~SmartPtr( )
+SmartPtr<T>::~SmartPtr()
 {
     if (nullptr != ptr) ptr->Release();
 }
