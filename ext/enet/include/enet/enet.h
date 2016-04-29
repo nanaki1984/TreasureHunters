@@ -579,6 +579,7 @@ ENET_API void                enet_peer_disconnect (ENetPeer *, enet_uint32);
 ENET_API void                enet_peer_disconnect_now (ENetPeer *, enet_uint32);
 ENET_API void                enet_peer_disconnect_later (ENetPeer *, enet_uint32);
 ENET_API void                enet_peer_throttle_configure (ENetPeer *, enet_uint32, enet_uint32, enet_uint32);
+ENET_API enet_uint32         enet_peer_clock_differential (ENetPeer *);
 extern int                   enet_peer_throttle (ENetPeer *, enet_uint32);
 extern void                  enet_peer_reset_queues (ENetPeer *);
 extern void                  enet_peer_setup_outgoing_command (ENetPeer *, ENetOutgoingCommand *);

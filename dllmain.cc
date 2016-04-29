@@ -3,7 +3,6 @@
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/BlocksAllocator.h"
 #include "Core/Memory/ScratchAllocator.h"
-#include "Game/PlayerInputs.h"
 
 #if _MSC_VER // this is defined when compiling with Visual Studio
 #   define EXPORT_API __declspec(dllexport) // Visual Studio needs annotating exported functions with this
@@ -45,6 +44,21 @@ extern "C"
     void EXPORT_API GameTick()
     {
         clientInstance->Tick();
+    }
+
+    void EXPORT_API GameCreateRoom(uint8_t playersCount, Network::ClientInstance::RoomCreationCallback callback)
+    {
+        clientInstance->CreateRoom(playersCount, callback);
+    }
+
+    void EXPORT_API GameJoinRoom(uint32_t roomId, Network::ClientInstance::JoinRoomCallback callback)
+    {
+        clientInstance->JoinRoom(roomId, callback);
+    }
+
+    void EXPORT_API GameStart(Network::ClientInstance::StartGameCallback callback)
+    {
+        clientInstance->StartGame(callback);
     }
 
     void EXPORT_API GameSendInput(float x, float y)

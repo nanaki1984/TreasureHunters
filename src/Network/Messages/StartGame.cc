@@ -1,14 +1,16 @@
-#include "Game/PlayerState.h"
+#include "Network/Messages/StartGame.h"
 
-namespace Game {
+namespace Network {
+    namespace Messages {
 
-DefineClassInfoWithFactoryAndFCC(Game::PlayerState, 'PLST', Network::Serializable);
-DefineSerializable(Game::PlayerState);
+DefineClassInfoWithFactoryAndFCC(Network::Messages::StartGame, 'STRM', Network::Serializable);
+DefineSerializable(Network::Messages::StartGame);
 
-PlayerState::PlayerState()
+StartGame::StartGame()
 { }
 
-PlayerState::~PlayerState()
+StartGame::~StartGame()
 { }
 
-} // namespace Game
+    } // namespace Messages
+} // namespace Network

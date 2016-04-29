@@ -1,9 +1,10 @@
-#include "Game/PlayerState.h"
+#include "Network/Messages/PlayerState.h"
 
-namespace Game {
+namespace Network {
+    namespace Messages {
 
-DefineClassInfoWithFactoryAndFCC(Game::PlayerState, 'PLST', Network::Serializable);
-DefineSerializable(Game::PlayerState);
+DefineClassInfoWithFactoryAndFCC(Network::Messages::PlayerState, 'PLST', Network::Serializable);
+DefineSerializable(Network::Messages::PlayerState);
 
 PlayerState::PlayerState()
 { }
@@ -11,4 +12,5 @@ PlayerState::PlayerState()
 PlayerState::~PlayerState()
 { }
 
-} // namespace Game
+    } // namespace Messages
+} // namespace Network

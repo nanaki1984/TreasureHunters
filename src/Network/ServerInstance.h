@@ -2,13 +2,14 @@
 
 #include "Network/HostInstance.h"
 #include "Network/Serializable.h"
-#include "Core/Collections/Queue_type.h"
+#include "Network/GameRoom.h"
+#include "Core/Pool/Pool_type.h"
 
 namespace Network {
 
 class ServerInstance : public HostInstance {
 protected:
-    Array<ENetPeer*> peers;
+    Core::Pool::Pool<GameRoom> rooms;
 public:
     ServerInstance();
     virtual ~ServerInstance();
@@ -18,7 +19,16 @@ public:
 
     void RequestStop();
 
-    void Broadcast(Network::Serializable *object);
+    void Send(ENetPeer *peer, const SmartPtr<Serializable> &object, MessageType messageType);
+    void Broadcast(const Array<ENetPeer*> &peers, const SmartPtr<Serializable> &object, MessageType messageType);
+
+    static ServerInstance* Instance();
 };
+
+inline ServerInstance*
+ServerInstance::Instance()
+{
+    return static_cast<ServerInstance*>(HostInstance::instance);
+}
 
 }; // namespace Network

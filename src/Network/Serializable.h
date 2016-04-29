@@ -5,20 +5,20 @@
 
 #define DeclareSerializable \
 public: \
-    virtual void Serialize(Core::IO::BitStream &stream); \
-    virtual void Deserialize(Core::IO::BitStream &stream);
+    virtual void Serialize(ENetPeer *peer, Core::IO::BitStream &stream); \
+    virtual void Deserialize(ENetPeer *peer, Core::IO::BitStream &stream);
 
 #define DefineSerializable(type) \
-void type::Serialize(Core::IO::BitStream &stream) \
+void type::Serialize(ENetPeer *peer, Core::IO::BitStream &stream) \
 { \
-    Network::NetWriteStream writeStream(stream); \
+    Network::NetWriteStream writeStream(peer, stream); \
     stream << type::RTTI.GetFCC(); \
     this->SerializeImpl(writeStream); \
 } \
  \
-void type::Deserialize(Core::IO::BitStream &stream) \
+void type::Deserialize(ENetPeer *peer, Core::IO::BitStream &stream) \
 { \
-    Network::NetReadStream readStream(stream); \
+    Network::NetReadStream readStream(peer, stream); \
     uint32_t fcc; \
     stream >> fcc; \
     assert(fcc == type::RTTI.GetFCC()); \

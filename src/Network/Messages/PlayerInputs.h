@@ -2,7 +2,8 @@
 
 #include "Network/Serializable.h"
 
-namespace Game {
+namespace Network {
+    namespace Messages {
 
 class PlayerInputs : public Network::Serializable {
     DeclareClassInfo;
@@ -25,4 +26,5 @@ public:
     PlayerInputs& operator =(const PlayerInputs &other) = delete;
 };
 
-} // namespace Game
+    } // namespace Messages
+} // namespace Network

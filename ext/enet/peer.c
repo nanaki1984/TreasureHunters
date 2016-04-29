@@ -58,6 +58,32 @@ enet_peer_throttle_configure (ENetPeer * peer, enet_uint32 interval, enet_uint32
     enet_peer_queue_outgoing_command (peer, & command, NULL, 0, 0);
 }
 
+/** Get a peer clock difference relative to host
+    @param peer destination for the packet
+*/
+enet_uint32
+enet_peer_clock_differential(ENetPeer * peer)
+{
+    int lowIndex = -1, i;
+    enet_uint32 lowrtt = 0xffffffff;
+
+    ENetPingTime* pingTime;
+    for (i = 0, pingTime = peer -> pingTimes; i < ENET_PEER_PING_TIMES_ARRAY_SIZE; ++i, ++pingTime) {
+        if (0 == pingTime -> roundTripTime)
+            continue;
+
+        if (pingTime->roundTripTime < lowrtt) {
+            lowIndex = i;
+            lowrtt = pingTime -> roundTripTime;
+        }
+    }
+
+    if (-1 == lowIndex)
+        return 0;
+    else
+        return peer -> pingTimes[lowIndex].clockDifferential;
+}
+
 int
 enet_peer_throttle (ENetPeer * peer, enet_uint32 rtt)
 {
@@ -407,6 +433,10 @@ enet_peer_reset (ENetPeer * peer)
     peer -> lastRoundTripTime = ENET_PEER_DEFAULT_ROUND_TRIP_TIME;
     peer -> lowestRoundTripTime = ENET_PEER_DEFAULT_ROUND_TRIP_TIME;
     peer -> lastRoundTripTimeVariance = 0;
+
+    memset(peer -> pingTimes, 0, sizeof (peer -> pingTimes));
+
+    peer -> pingTimesCounter = 0;
     peer -> highestRoundTripTimeVariance = 0;
     peer -> roundTripTime = ENET_PEER_DEFAULT_ROUND_TRIP_TIME;
     peer -> roundTripTimeVariance = 0;

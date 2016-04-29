@@ -25,6 +25,7 @@ public:
 
     Handle<T> NewInstance();
     template <typename... Args> Handle<T> NewInstance(Args... arguments);
+    Handle<T> GetInstance(uint32_t id);
     Handle<T> CloneInstance(const Handle<T> &handle);
     void DeleteInstance(const Handle<T> &handle);
 };

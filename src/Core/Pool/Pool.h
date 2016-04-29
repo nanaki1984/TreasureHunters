@@ -105,6 +105,13 @@ Pool<T>::NewInstance(Args... arguments)
 
 template <typename T>
 inline Handle<T>
+Pool<T>::GetInstance(uint32_t id)
+{
+    return static_cast<T*>(this->Get(id));
+}
+
+template <typename T>
+inline Handle<T>
 Pool<T>::CloneInstance(const Handle<T> &handle)
 {
     return static_cast<T*>(this->Clone(handle->GetInstanceID()));

@@ -15,6 +15,8 @@ protected:
         stream.Serialize(playersCount);
     }
 public:
+    static const uint32_t kUnknownId = 0xffffffff;
+
     uint32_t roomId;
     uint8_t playersCount;
 

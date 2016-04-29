@@ -13,6 +13,13 @@
 namespace Network {
 
 class HostInstance {
+public:
+    enum MessageType
+    {
+        ReliableSequenced = 0,
+        Sequenced,
+        Unsequenced
+    };
 protected:
     static HostInstance *instance;
 
@@ -23,6 +30,8 @@ protected:
     SmartPtr<Core::StringsTable> stringsTable;
 
     Array<SmartPtr<Managers::BaseManager>> managers;
+
+    enet_uint32 MessageTypeToFlags(MessageType messageType);
 
     bool StartServer(int port);
     bool Connect(const char *serverHost, int serverPort);

@@ -2,27 +2,37 @@
 
 #include "Network/Serializable.h"
 
-namespace Game {
+namespace Network {
+    namespace Messages {
 
-class PlayerState : public Network::Serializable {
+class JoinRoom : public Network::Serializable {
     DeclareClassInfo;
     DeclareSerializable;
 protected:
     template <typename Stream> void SerializeImpl(Stream &stream)
     {
-        stream.Serialize(t);
-        stream.Serialize(x);
-        stream.Serialize(y);
+        stream.Serialize(roomId);
+        stream.Serialize(flags);
     }
 public:
-    int t;
-    float x, y;
+    enum Flags
+    {
+        Request = 0,
+        Success,
+        Fail
+    };
 
-    PlayerState();
-    PlayerState(const PlayerState &other) = delete;
-    virtual ~PlayerState();
+    uint32_t roomId;
+    Flags flags;
 
-    PlayerState& operator =(const PlayerState &other) = delete;
+    // ToDo: room data
+
+    JoinRoom();
+    JoinRoom(const JoinRoom &other) = delete;
+    virtual ~JoinRoom();
+
+    JoinRoom& operator =(const JoinRoom &other) = delete;
 };
 
-} // namespace Game
+    } // namespace Messages
+} // namespace Network

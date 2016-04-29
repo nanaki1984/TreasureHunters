@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MallocAllocator.h"
 #include "Core/Memory/LinearAllocator.h"
@@ -20,6 +22,12 @@ int main(int argc, char **argv) {
 
 	{
 		Network::ServerInstance serverInstance;
+
+        Core::Log::Instance()->SetCallback([](int msgType, const char *msg)
+        {
+            std::cout << msg << std::endl;
+        });
+
         if (serverInstance.Initialize(1234))
         {
             while (true)

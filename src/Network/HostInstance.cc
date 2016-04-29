@@ -12,6 +12,24 @@ namespace Network {
 
 HostInstance *HostInstance::instance = nullptr;
 
+enet_uint32
+HostInstance::MessageTypeToFlags(MessageType messageType)
+{
+    enet_uint32 packetFlags = 0;
+    switch (messageType)
+    {
+    case ReliableSequenced:
+        packetFlags = ENET_PACKET_FLAG_RELIABLE;
+        break;
+    case Unsequenced:
+        packetFlags = ENET_PACKET_FLAG_UNSEQUENCED;
+        break;
+    default:
+        break;
+    }
+    return packetFlags;
+}
+
 HostInstance::HostInstance()
 : host(nullptr),
   managers(GetAllocator<MallocAllocator>())

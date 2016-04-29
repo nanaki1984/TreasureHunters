@@ -1,9 +1,10 @@
-#include "Game/PlayerInputs.h"
+#include "Network/Messages/PlayerInputs.h"
 
-namespace Game {
+namespace Network {
+    namespace Messages {
 
-DefineClassInfoWithFactoryAndFCC(Game::PlayerInputs, 'PLIN', Network::Serializable);
-DefineSerializable(Game::PlayerInputs);
+DefineClassInfoWithFactoryAndFCC(Network::Messages::PlayerInputs, 'PLIN', Network::Serializable);
+DefineSerializable(Network::Messages::PlayerInputs);
 
 PlayerInputs::PlayerInputs()
 { }
@@ -11,4 +12,5 @@ PlayerInputs::PlayerInputs()
 PlayerInputs::~PlayerInputs()
 { }
 
-} // namespace Game
+    } // namespace Messages
+} // namespace Network

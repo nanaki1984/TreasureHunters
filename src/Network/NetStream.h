@@ -1,5 +1,8 @@
 #pragma once
 
+#define NOMINMAX
+#include "enet/enet.h"
+
 #include "Core/IO/BitStream.h"
 
 namespace Network {
@@ -7,10 +10,12 @@ namespace Network {
 template <bool IsReader>
 class NetStream {
 protected:
+    ENetPeer *peer;
     Core::IO::BitStream &stream;
 public:
-    NetStream(Core::IO::BitStream &_stream)
-    : stream(_stream)
+    NetStream(ENetPeer *_peer, Core::IO::BitStream &_stream)
+    : peer(_peer),
+      stream(_stream)
     {
         if (IsReader)
             stream.Rewind();
@@ -40,12 +45,35 @@ public:
             return true;
         }
     }
+
+    bool SerializeTimestamp(float &timestamp)
+    {
+        if (IsReader)
+        {
+            if (stream.RemainingBytes() >= 4)
+            {
+                uint32_t t;
+                stream >> t;
+                t -= enet_peer_clock_differential(peer);
+                timestamp = t * 0.001f;
+                return true;
+            }
+            else
+                return false;
+        }
+        else
+        {
+            uint32_t t = timestamp * 1000.0f;
+            t += enet_peer_clock_differential(peer);
+            stream << t;
+        }
+    }
 };
 
 class NetReadStream : public NetStream<true> {
 public:
-    NetReadStream(Core::IO::BitStream &_stream)
-    : NetStream(_stream)
+    NetReadStream(ENetPeer *_peer, Core::IO::BitStream &_stream)
+    : NetStream(_peer, _stream)
     { }
 
     ~NetReadStream()
@@ -54,8 +82,8 @@ public:
 
 class NetWriteStream : public NetStream<false> {
 public:
-    NetWriteStream(Core::IO::BitStream &_stream)
-    : NetStream(_stream)
+    NetWriteStream(ENetPeer *_peer, Core::IO::BitStream &_stream)
+    : NetStream(_peer, _stream)
     { }
 
     ~NetWriteStream()
