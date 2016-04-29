@@ -51,6 +51,9 @@ HostInstance::StartServer(int port)
         host = enet_host_create(&address, 8, 2, 0, 0);
         if (nullptr == host)
             return false;
+
+        if (enet_host_compress_with_range_coder(host) != 0)
+            return false;
     }
 
     return true;

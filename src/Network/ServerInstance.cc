@@ -35,13 +35,13 @@ ServerInstance::Tick()
         switch (event.type)
         {
         case ENET_EVENT_TYPE_CONNECT:
-            log->Write(Log::Info, "Connected with %x:%u.\n",
+            log->Write(Log::Info, "Connected with %x:%u.",
                 event.peer->address.host,
                 event.peer->address.port);
             peers.PushBack(event.peer);
             break;
         case ENET_EVENT_TYPE_DISCONNECT:
-            log->Write(Log::Info, "Disconnected from %x:%u.\n",
+            log->Write(Log::Info, "Disconnected from %x:%u.",
                 event.peer->address.host,
                 event.peer->address.port);
             peers.Remove(event.peer);

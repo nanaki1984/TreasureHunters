@@ -37,7 +37,7 @@ ClientInstance::Tick()
         switch (event.type)
         {
         case ENET_EVENT_TYPE_CONNECT:
-            log->Write(Log::Info, "Connected with %x:%u.\n",
+            log->Write(Log::Info, "Connected with %x:%u.",
                 event.peer->address.host,
                 event.peer->address.port);
             assert(nullptr == server);
@@ -50,7 +50,7 @@ ClientInstance::Tick()
             }
             break;
         case ENET_EVENT_TYPE_DISCONNECT:
-            log->Write(Log::Info, "Disconnected from %x:%u.\n",
+            log->Write(Log::Info, "Disconnected from %x:%u.",
                 event.peer->address.host,
                 event.peer->address.port);
             assert(event.peer == server);
