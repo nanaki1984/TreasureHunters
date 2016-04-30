@@ -433,9 +433,6 @@ enet_peer_reset (ENetPeer * peer)
     peer -> lastRoundTripTime = ENET_PEER_DEFAULT_ROUND_TRIP_TIME;
     peer -> lowestRoundTripTime = ENET_PEER_DEFAULT_ROUND_TRIP_TIME;
     peer -> lastRoundTripTimeVariance = 0;
-
-    memset(peer -> pingTimes, 0, sizeof (peer -> pingTimes));
-
     peer -> pingTimesCounter = 0;
     peer -> highestRoundTripTimeVariance = 0;
     peer -> roundTripTime = ENET_PEER_DEFAULT_ROUND_TRIP_TIME;
@@ -449,8 +446,9 @@ enet_peer_reset (ENetPeer * peer)
     peer -> eventData = 0;
     peer -> totalWaitingData = 0;
 
+    memset (peer -> pingTimes, 0, sizeof (peer -> pingTimes));
     memset (peer -> unsequencedWindow, 0, sizeof (peer -> unsequencedWindow));
-    
+
     enet_peer_reset_queues (peer);
 }
 

@@ -3,6 +3,7 @@
 #include "Network/HostInstance.h"
 #include "Network/Serializable.h"
 #include "Core/Collections/Queue_type.h"
+#include "Game/Player.h"
 
 namespace Network {
 
@@ -35,7 +36,11 @@ protected:
     uint32_t roomId;
     uint8_t playerId;
     float lastTimestamp;
+    float accumulator, simTime;
+    SmartPtr<Game::Player> player;
 public:
+    static const float kFixedStepTime;
+
     ClientInstance();
     virtual ~ClientInstance();
 
@@ -54,6 +59,10 @@ public:
     State GetState() const;
     uint8_t GetRoomId() const;
     uint8_t GetPlayerId() const;
+    float GetRTT() const;
+
+    void SendPlayerInputs(float x, float y);
+    void GetPlayerPosition(float *x, float *y);
 
     static ClientInstance* Instance();
 };
@@ -76,6 +85,13 @@ ClientInstance::GetPlayerId() const
 {
     assert(Playing == state);
     return playerId;
+}
+
+inline float
+ClientInstance::GetRTT() const
+{
+    assert(state > Disconnected);
+    return server->roundTripTime * 0.001f;
 }
 
 inline ClientInstance*

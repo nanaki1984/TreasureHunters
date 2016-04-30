@@ -192,7 +192,7 @@ Queue<T>::PopBack()
     assert(size > 0);
     --size;
     if (!std::is_trivially_copyable<T>::value && std::is_destructible<T>::value)
-        (data + (offset + size) % data.Capacity())->~T();
+        (data.Begin() + (offset + size) % data.Capacity())->~T();
 }
 
 template <typename T>

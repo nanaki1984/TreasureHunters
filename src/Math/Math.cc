@@ -173,6 +173,11 @@ Clamp01(float value)
     return std::min(std::max(value, 0.0f), 1.0f);
 }
 
+float Lerp(float a, float b, float t)
+{
+    return a + (b - a) * Clamp01(t);
+}
+
 uint32_t
 MixHashCodes(uint32_t hash0, uint32_t hash1)
 {

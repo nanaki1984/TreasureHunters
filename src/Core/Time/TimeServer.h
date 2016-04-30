@@ -48,7 +48,7 @@ public:
     void Pause();
     void Resume();
 
-    float GetMilliseconds() const;
+    uint32_t GetMilliseconds() const;
 
     bool IsPaused() const;
     float GetRealTime() const;

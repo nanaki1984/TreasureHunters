@@ -41,6 +41,16 @@ extern "C"
         return clientInstance->Initialize(serverHost, serverPort);
     }
 
+    int EXPORT_API GameGetState()
+    {
+        return clientInstance->GetState();
+    }
+
+    float EXPORT_API GameGetRTT()
+    {
+        return clientInstance->GetRTT();
+    }
+
     void EXPORT_API GameTick()
     {
         clientInstance->Tick();
@@ -62,18 +72,13 @@ extern "C"
     }
 
     void EXPORT_API GameSendInput(float x, float y)
-    {/*
-        auto plaInputs = SmartPtr<Game::PlayerInputs>::MakeNew<BlocksAllocator>();
-        plaInputs->t = gameInstance->GetPlayer()->GetT();
-        plaInputs->x = x;
-        plaInputs->y = y;
-        gameInstance->Send(plaInputs);*/
+    {
+        clientInstance->SendPlayerInputs(x, y);
     }
 
     void EXPORT_API GameReceivePosition(float *x, float *y)
-    {/*
-        *x = gameInstance->GetPlayer()->GetX();
-        *y = gameInstance->GetPlayer()->GetY();*/
+    {
+        clientInstance->GetPlayerPosition(x, y);
     }
 
     void EXPORT_API GamePause()

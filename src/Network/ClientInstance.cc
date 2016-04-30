@@ -7,6 +7,8 @@
 #include "Network/Messages/CreateRoom.h"
 #include "Network/Messages/JoinRoom.h"
 #include "Network/Messages/StartGame.h"
+#include "Network/Messages/PlayerState.h"
+#include "Network/Messages/PlayerInputs.h"
 
 using namespace Core;
 using namespace Core::IO;
@@ -14,6 +16,8 @@ using namespace Core::Memory;
 using namespace Managers;
 
 namespace Network {
+
+const float ClientInstance::kFixedStepTime = 0.016f;
 
 ClientInstance::ClientInstance()
 : HostInstance(),
@@ -37,6 +41,8 @@ ClientInstance::Initialize(const char *serverHost, int serverPort)
 void
 ClientInstance::Tick()
 {
+    timeServer->Tick();
+
     ENetEvent event;
     while (enet_host_service(host, &event, 0) > 0)
     {
@@ -67,7 +73,8 @@ ClientInstance::Tick()
             server = nullptr;
             event.peer->data = nullptr;
 
-            // ToDo: callback, try to reconnect?
+            if (Playing == state)
+                player.Reset();
 
             state = Disconnected;
             break;
@@ -101,6 +108,7 @@ ClientInstance::Tick()
                         {
                             roomId = joinRoom->roomId;
                             state = JoinedRoom;
+                            log->Write(Log::Info, "Joined room %u.", roomId);
                         }
                     }
 
@@ -111,7 +119,6 @@ ClientInstance::Tick()
                 else if (ptr->IsInstanceOf<Messages::StartGame>())
                 {
                     bool success = false;
-
                     if (Waiting == state)
                     {
                         auto startGame = SmartPtr<Messages::StartGame>::CastFrom(ptr);
@@ -119,8 +126,11 @@ ClientInstance::Tick()
                         if (success)
                         {
                             playerId = startGame->playerId;
+                            accumulator = simTime = .0f;
                             lastTimestamp = startGame->goTime;
+                            player = SmartPtr<Game::Player>::MakeNew<MallocAllocator>(Game::Player::SimulatedLagless, .0f, .0f);
                             state = Playing;
+                            log->Write(Log::Info, "Starting game for player at time %f (now: %f).", lastTimestamp, Core::Time::TimeServer::Instance()->GetRealTime());
                         }
                     }
 
@@ -128,13 +138,41 @@ ClientInstance::Tick()
                     startGameCallback(success);
                     startGameCallback = nullptr;
                 }
+                else if (ptr->IsInstanceOf<Messages::PlayerState>())
+                {
+                    if (player.IsValid())
+                    {
+                        auto playerState = SmartPtr<Messages::PlayerState>::CastFrom(ptr);
+                        player->SendPlayerState(playerState->t, playerState->x, playerState->y);
+                        if (simTime < player->GetLastTimestamp()) // !!!! VERY IMPORTANT, needed for the client to sync with server
+                            simTime = player->GetLastTimestamp();
+                    }
+                }
             }
             enet_packet_destroy(event.packet);
             break;
         }
     }
 
-    // physics
+    // update player
+    if (Playing == state)
+    {
+        float newTimestamp = Core::Time::TimeServer::Instance()->GetRealTime();
+        float dt = newTimestamp - lastTimestamp;
+        if (dt > .0f)
+        {
+            lastTimestamp = newTimestamp;
+
+            accumulator += dt;
+            while (accumulator >= kFixedStepTime)
+            {
+                accumulator -= kFixedStepTime;
+                simTime += kFixedStepTime;
+
+                player->Update(simTime);
+            }
+        }
+    }
 
     auto it = managers.Begin(), end = managers.End();
     for (; it != end; ++it)
@@ -255,6 +293,29 @@ ClientInstance::Send(const SmartPtr<Serializable> &object, MessageType messageTy
     {
         sendQueue.PushBack(object);
         sendQueueMsgType.PushBack(messageType);
+    }
+}
+
+void
+ClientInstance::SendPlayerInputs(float x, float y)
+{
+    player->SendInput(simTime, x, y);
+
+    auto playerInputs = SmartPtr<Messages::PlayerInputs>::MakeNew<ScratchAllocator>();
+    playerInputs->t = simTime;
+    playerInputs->x = x;
+    playerInputs->y = y;
+
+    this->Send(SmartPtr<Serializable>::CastFrom(playerInputs), Sequenced);
+}
+
+void
+ClientInstance::GetPlayerPosition(float *x, float *y)
+{
+    if (player.IsValid())
+    {
+        *x = player->GetX();
+        *y = player->GetY();
     }
 }
 

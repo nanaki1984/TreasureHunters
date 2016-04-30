@@ -46,7 +46,7 @@ enet_host_random_seed (void)
 {
     return (enet_uint32) timeGetTime ();
 }
-
+/*
 enet_uint32
 enet_time_get (void)
 {
@@ -58,7 +58,7 @@ enet_time_set (enet_uint32 newTimeBase)
 {
     timeBase = (enet_uint32) timeGetTime () - newTimeBase;
 }
-
+*/
 int
 enet_address_set_host (ENetAddress * address, const char * name)
 {

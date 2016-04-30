@@ -112,13 +112,13 @@ TimeServer::Resume()
         (*it)->Play();
 }
 
-float
+uint32_t
 TimeServer::GetMilliseconds() const
 {
 #if defined _WIN32
     QueryPerformanceCounter((LARGE_INTEGER*)&timeCounter);
 
-    return ((timeCounter - timeStart) * 1000 / (float)timeFreq);
+    return ((timeCounter - timeStart) * 1000 / timeFreq);
 #elif defined __APPLE__
     uint64_t absTime = mach_absolute_time();
     uint64_t nanosec = ((absTime - machAbsTimeStart) * timebaseInfo.numer) / timebaseInfo.denom;

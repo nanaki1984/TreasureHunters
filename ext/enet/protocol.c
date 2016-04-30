@@ -852,7 +852,7 @@ enet_protocol_handle_acknowledge (ENetHost * host, ENetEvent * event, ENetPeer *
     if ( ENET_PEER_PING_TIMES_ARRAY_SIZE == peer -> pingTimesCounter )
       peer -> pingTimesCounter = 0;
     pingTime -> roundTripTime = roundTripTime;
-    pingTime -> clockDifferential = ENET_NET_TO_HOST_32(command -> acknowledge.clock) - (host -> serviceTime - (roundTripTime >> 1));
+    pingTime->clockDifferential = ENET_TIME_DIFFERENCE(ENET_NET_TO_HOST_32(command->acknowledge.clock), (host -> serviceTime - (roundTripTime >> 1)));
 
     enet_peer_throttle (peer, roundTripTime);
 

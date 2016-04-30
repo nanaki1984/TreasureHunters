@@ -391,6 +391,17 @@ Array<T>::Trim()
 }
 
 template <typename T>
+inline int32_t
+Array<T>::IndexOf(const T &item)
+{
+    for (uint32_t i = 0; i < size; ++i) {
+        if (*(data + i) == item)
+            return i;
+    }
+    return -1;
+}
+
+template <typename T>
 inline void
 Array<T>::Sort(Array<T> &array, uint32_t index, uint32_t count, std::function<bool(const T&, const T&)> f)
 {

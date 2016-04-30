@@ -67,6 +67,8 @@ public:
 
     void Trim();
 
+    int32_t IndexOf(const T &item);
+
     static void Sort(Array<T> &array, uint32_t index, uint32_t count, std::function<bool(const T&, const T&)> f);
 };
 

@@ -1,0 +1,6 @@
+vs12
+/unity/*.csproj
+/unity/Library
+/unity/obj
+/unity/*.suo
+/unity/*.sln

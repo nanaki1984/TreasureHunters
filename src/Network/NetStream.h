@@ -64,8 +64,9 @@ public:
         else
         {
             uint32_t t = timestamp * 1000.0f;
-            t += enet_peer_clock_differential(peer);
+            //t += enet_peer_clock_differential(peer);
             stream << t;
+            return true;
         }
     }
 };

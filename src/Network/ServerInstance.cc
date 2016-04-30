@@ -8,6 +8,7 @@
 #include "Network/Messages/CreateRoom.h"
 #include "Network/Messages/JoinRoom.h"
 #include "Network/Messages/StartGame.h"
+#include "Network/Messages/PlayerInputs.h"
 
 using namespace Core;
 using namespace Core::IO;
@@ -33,6 +34,8 @@ ServerInstance::Initialize(int port)
 void
 ServerInstance::Tick()
 {
+    timeServer->Tick();
+
     ENetEvent event;
     while (enet_host_service(host, &event, 0) > 0)
     {
@@ -50,7 +53,8 @@ ServerInstance::Tick()
             if (event.peer->data != nullptr)
             {
                 GameRoom *peerRoom = static_cast<GameRoom*>(event.peer->data);
-                peerRoom->PlayerLeft(event.peer); // ToDo: wait for reconnection?
+                if (peerRoom->PlayerLeft(event.peer))
+                    peerRoom->Destroy();
 
                 event.peer->data = nullptr;
             }
@@ -102,23 +106,29 @@ ServerInstance::Tick()
                         !room->PlayerReady(event.peer, startGame))
                         this->Send(event.peer, ptr, ReliableSequenced);
                 }
+                else if (ptr->IsInstanceOf<Messages::PlayerInputs>())
+                {
+                    if (event.peer->data != nullptr)
+                    {
+                        GameRoom *peerRoom = static_cast<GameRoom*>(event.peer->data);
+                        peerRoom->RecvPlayerInputs(event.peer, SmartPtr<Messages::PlayerInputs>::CastFrom(ptr));
+                    }
+                }
             }
             enet_packet_destroy(event.packet);
             break;
         }
     }
 
-    // physics
-    /*
-    player->Update();
+    // update rooms
+    auto roomIt = rooms.Begin(), roomsEnd = rooms.End();
+    while (roomIt != roomsEnd)
     {
-        SmartPtr<Game::PlayerState> plaState = SmartPtr<Game::PlayerState>::MakeNew<BlocksAllocator>();
-        plaState->t = player->GetT();
-        plaState->x = player->GetX();
-        plaState->y = player->GetY();
-        this->Broadcast(plaState);
+        if (roomIt->Update())
+            roomIt->Destroy();
+        else
+            ++roomIt;
     }
-    */
 
     auto it = managers.Begin(), end = managers.End();
     for (; it != end; ++it)

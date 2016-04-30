@@ -16,8 +16,7 @@ protected:
         stream.Serialize(y);
     }
 public:
-    int t;
-    float x, y;
+    float t, x, y;
 
     PlayerInputs();
     PlayerInputs(const PlayerInputs &other) = delete;

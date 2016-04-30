@@ -206,7 +206,8 @@ SmartPtr<T>
 SmartPtr<T>::MakeNew(Args... params)
 {
     A *a = &Core::Memory::GetAllocator<A>();
-    Core::RefCounted *p = new(a->Allocate(sizeof(T), __alignof(T))) T(std::forward<Args...>(params...));
+    //Core::RefCounted *p = new(a->Allocate(sizeof(T), __alignof(T))) T(std::forward<Args...>(params...));
+    Core::RefCounted *p = new(a->Allocate(sizeof(T), __alignof(T))) T(params...);
     p->allocator = a;
 
     SmartPtr<T> sp;
@@ -222,7 +223,8 @@ SmartPtr<T>
 SmartPtr<T>::MakeNew(Args... params)
 {
     A *a = &Core::Memory::GetAllocator<A>();
-    Core::RefCounted *p = new(a->Allocate(sizeof(U), __alignof(U))) U(std::forward<Args...>(params...));
+    //Core::RefCounted *p = new(a->Allocate(sizeof(U), __alignof(U))) U(std::forward<Args...>(params...));
+    Core::RefCounted *p = new(a->Allocate(sizeof(U), __alignof(U))) U(params...);
     p->allocator = a;
 
     SmartPtr<T> sp;

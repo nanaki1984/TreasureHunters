@@ -17,7 +17,7 @@ protected:
         stream.SerializeTimestamp(goTime);
     }
 public:
-    static const uint32_t kUnknownId = 0xffffffff;
+    static const uint8_t kUnknownId = 0xff;
 
     enum Flags
     {

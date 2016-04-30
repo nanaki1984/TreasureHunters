@@ -59,6 +59,7 @@ HostInstance::StartServer(int port)
     Memory::Zero(&callbacks);
     callbacks.malloc = [](size_t sz) { return Memory::GetAllocator<MallocAllocator>().Allocate(sz, 4); };
     callbacks.free = [](void *ptr) { return Memory::GetAllocator<MallocAllocator>().Free(ptr); };
+    callbacks.time_get = [](void) { return Core::Time::TimeServer::Instance()->GetMilliseconds(); };
 
     if (0 == enet_initialize_with_callbacks(ENET_VERSION, &callbacks))
     {
@@ -86,6 +87,7 @@ HostInstance::Connect(const char *serverHost, int serverPort)
     Memory::Zero(&callbacks);
     callbacks.malloc = [](size_t sz) { return Memory::GetAllocator<MallocAllocator>().Allocate(sz, 4); };
     callbacks.free = [](void *ptr) { return Memory::GetAllocator<MallocAllocator>().Free(ptr); };
+    callbacks.time_get = [](void) { return Core::Time::TimeServer::Instance()->GetMilliseconds(); };
 
     if (0 == enet_initialize_with_callbacks(ENET_VERSION, &callbacks))
     {
@@ -93,6 +95,9 @@ HostInstance::Connect(const char *serverHost, int serverPort)
 
         host = enet_host_create(nullptr, 1, 2, 0, 0);
         if (nullptr == host)
+            return false;
+
+        if (enet_host_compress_with_range_coder(host) != 0)
             return false;
 
         enet_address_set_host(&address, serverHost);

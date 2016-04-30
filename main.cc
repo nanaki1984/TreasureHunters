@@ -12,6 +12,18 @@
 using namespace Core::Memory;
 using namespace Managers;
 
+Network::ServerInstance *serverInstance = nullptr;
+char serverInstanceBuffer[sizeof(Network::ServerInstance)];
+
+void shutdown()
+{
+    serverInstance->RequestStop();
+    serverInstance->~ServerInstance();
+    serverInstance = nullptr;
+
+    ShutdownMemory();
+}
+
 int main(int argc, char **argv) {
 	InitializeMemory();
 
@@ -20,24 +32,23 @@ int main(int argc, char **argv) {
 	InitAllocator<BlocksAllocator>(&GetAllocator<MallocAllocator>(), 8192);
     InitAllocator<ScratchAllocator>(&GetAllocator<MallocAllocator>(), 512 * 1024);
 
-	{
-		Network::ServerInstance serverInstance;
+    atexit(shutdown);
 
-        Core::Log::Instance()->SetCallback([](int msgType, const char *msg)
+    serverInstance = new(serverInstanceBuffer) Network::ServerInstance();
+    Core::Log::Instance()->SetCallback([](int msgType, const char *msg)
+    {
+        std::cout << msg << std::endl;
+    });
+
+    if (serverInstance->Initialize(1234))
+    {
+        std::cout << "server started" << std::endl;
+
+        while (true)
         {
-            std::cout << msg << std::endl;
-        });
+            serverInstance->Tick();
 
-        if (serverInstance.Initialize(1234))
-        {
-            while (true)
-            {
-                serverInstance.Tick();
-
-                Sleep(33); // 30 HZ?
-            }
+            Sleep(0);
         }
-	}
-
-	ShutdownMemory();
+    }
 }
