@@ -11,11 +11,13 @@ class PlayerState : public Network::Serializable {
 protected:
     template <typename Stream> void SerializeImpl(Stream &stream)
     {
+        stream.Serialize(id);
         stream.Serialize(t);
         stream.Serialize(x);
         stream.Serialize(y);
     }
 public:
+    uint8_t id;
     float t, x, y;
 
     PlayerState();

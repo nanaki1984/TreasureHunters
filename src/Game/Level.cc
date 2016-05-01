@@ -1,33 +1,23 @@
 #include "Game/Level.h"
+#include "Core/SmartPtr.h"
 #include "Core/Memory/MallocAllocator.h"
-//#include "Game/Entity.h"
-#include "Core/Pool/Pool.h"
-//#include "Components/Transform.h"
+#include "Core/Memory/BlocksAllocator.h"
+#include "Core/Collections/Array.h"
 
 using namespace Core::Memory;
-//using namespace Components;
 
 namespace Game {
 
-Level::Level()
-//: entities(GetAllocator<MallocAllocator>())
-{ }
+DefineClassInfo(Game::Level, Core::RefCounted);
+
+Level::Level(const SmartPtr<Network::GameRoomData> &roomData)
+: players(GetAllocator<MallocAllocator>(), roomData->playersData.Count())
+{
+    for (uint8_t id = 0, count = roomData->playersData.Count(); id < count; ++id)
+        players.PushBack(SmartPtr<Player>::MakeNew<BlocksAllocator>(Player::Cloned, roomData->playersData[id]));
+}
 
 Level::~Level()
 { }
-/*
-Handle<Entity>
-Level::NewEntity()
-{
-	Handle<Entity> newEntity = entities.NewInstance(this);
-	newEntity->AddComponent<Transform>();
-	return newEntity;
-}
 
-Handle<Entity>
-Level::CloneEntity(const Handle<Entity> &source)
-{
-	return entities.CloneInstance(source);
-}
-*/
 } // namespace Game

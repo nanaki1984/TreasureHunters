@@ -1,4 +1,5 @@
 #include "Network/Messages/JoinRoom.h"
+#include "Core/Collections/Array.h"
 
 namespace Network {
     namespace Messages {

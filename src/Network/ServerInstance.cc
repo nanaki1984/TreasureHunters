@@ -87,7 +87,9 @@ ServerInstance::Tick()
                     if (room.IsValid() && GameRoom::WaitingJoin == room->GetState())
                     {
                         room->AddPlayer(event.peer);
+
                         joinRoom->flags = Messages::JoinRoom::Success;
+                        joinRoom->roomData = room->GetData();
 
                         event.peer->data = room.Get();
                     }

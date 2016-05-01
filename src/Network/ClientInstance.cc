@@ -142,7 +142,7 @@ ClientInstance::Tick()
                 }
                 else if (ptr->IsInstanceOf<Messages::PlayerState>())
                 {
-                    if (player.IsValid())
+                    if (player.IsValid() && Playing == state && !timeServer->IsPaused())
                     {
                         auto playerState = SmartPtr<Messages::PlayerState>::CastFrom(ptr);
                         player->SendPlayerState(playerState->t, playerState->x, playerState->y);
@@ -157,7 +157,7 @@ ClientInstance::Tick()
     }
 
     // update player
-    if (Playing == state)
+    if (Playing == state && !timeServer->IsPaused())
     {
         float newTimestamp = Core::Time::TimeServer::Instance()->GetTime();
         float dt = newTimestamp - lastTimestamp;
@@ -209,6 +209,9 @@ ClientInstance::RequestResume()
         auto it = managers.Begin(), end = managers.End();
         for (; it != end; ++it)
             (*it)->OnResume();
+
+        if (Playing == state)
+            lastTimestamp = Core::Time::TimeServer::Instance()->GetTime();
     }
 }
 

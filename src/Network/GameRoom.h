@@ -3,13 +3,17 @@
 #define NOMINMAX
 #include "enet/enet.h"
 
+#include "Core/SmartPtr.h"
 #include "Core/Pool/BaseObject.h"
 #include "Core/Collections/Array_type.h"
 #include "Network/Messages/StartGame.h"
 #include "Network/Messages/PlayerInputs.h"
 #include "Game/Player.h"
+#include "Network/GameRoomData.h"
 
 namespace Network {
+
+using Core::Collections::Array;
 
 class GameRoom : public Core::Pool::BaseObject {
     DeclareClassInfo;
@@ -24,12 +28,14 @@ protected:
     float lifeTime;
     State state;
 
-    Core::Collections::Array<ENetPeer*> peers;
-    Core::Collections::Array<SmartPtr<Messages::StartGame>> startGameMsgs;
+    Array<ENetPeer*> peers;
+    Array<SmartPtr<Messages::StartGame>> startGameMsgs;
 
     float lastTimestamp;
     float accumulator, simTime;
-    Core::Collections::Array<SmartPtr<Game::Player>> players;
+    Array<SmartPtr<Game::Player>> players;
+
+    SmartPtr<GameRoomData> data;
 public:
     const float kFixedStepTime = 0.05f;
 
@@ -37,6 +43,7 @@ public:
     virtual ~GameRoom();
 
     State GetState() const;
+    const SmartPtr<GameRoomData>& GetData() const;
 
     void AddPlayer(ENetPeer *peer);
     bool PlayerReady(ENetPeer *peer, const SmartPtr<Messages::StartGame> &startGame);
@@ -51,6 +58,12 @@ inline GameRoom::State
 GameRoom::GetState() const
 {
     return state;
+}
+
+inline const SmartPtr<GameRoomData>&
+GameRoom::GetData() const
+{
+    return data;
 }
 
 }; // namespace Network

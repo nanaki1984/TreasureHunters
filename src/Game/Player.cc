@@ -14,15 +14,15 @@ namespace Game {
 
 DefineClassInfo(Game::Player, Core::RefCounted);
 
-Player::Player(Type _type, float px, float py)
+Player::Player(Type _type, const NetData &data)
 : type(_type),
   inputs(GetAllocator<MallocAllocator>(), 8),
   states(GetAllocator<MallocAllocator>(), 8),
-  lastPx(px),
-  lastPy(py),
+  lastPx(data.startX),
+  lastPy(data.startY),
   lerp(1.0f)
 {
-    states.PushBack(State(.0f, px, py));
+    states.PushBack(State(.0f, data.startX, data.startY));
 }
 
 Player::~Player()
@@ -191,7 +191,7 @@ Player::Update(float t)
 
     if (SimulatedLagless == type)
     {
-        lerp += Network::ClientInstance::kFixedStepTime * 4.0f;
+        lerp += Network::ClientInstance::kFixedStepTime * 6.0f;
         if (lerp >= 1.0f)
         {
             lastPx = states.Back().px;

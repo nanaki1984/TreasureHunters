@@ -1,6 +1,9 @@
 #pragma once
 
+#include "Core/SmartPtr.h"
 #include "Network/Serializable.h"
+#include "Network/GameRoomData.h"
+#include "Core/Memory/MallocAllocator.h"
 
 namespace Network {
     namespace Messages {
@@ -13,6 +16,16 @@ protected:
     {
         stream.Serialize(roomId);
         stream.Serialize(flags);
+        if (Success == flags)
+        {
+            if (Stream::IsWriting)
+                stream.SerializeArray(roomData->playersData);
+            else
+            {
+                roomData = SmartPtr<GameRoomData>::MakeNew<Core::Memory::MallocAllocator>();
+                stream.SerializeArray(roomData->playersData);
+            }
+        }
     }
 public:
     enum Flags
@@ -24,8 +37,7 @@ public:
 
     uint32_t roomId;
     Flags flags;
-
-    // ToDo: room data
+    SmartPtr<GameRoomData> roomData;
 
     JoinRoom();
     JoinRoom(const JoinRoom &other) = delete;

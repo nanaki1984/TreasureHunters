@@ -13,6 +13,10 @@ protected:
     ENetPeer *peer;
     Core::IO::BitStream &stream;
 public:
+    enum {
+        IsWriting = IsReader ? 0 : 1
+    };
+
     NetStream(ENetPeer *_peer, Core::IO::BitStream &_stream)
     : peer(_peer),
       stream(_stream)
@@ -42,6 +46,39 @@ public:
         else
         {
             stream << value;
+            return true;
+        }
+    }
+
+    template <typename T> bool SerializeArray(Core::Collections::Array<T> &array) // ToDo: different sizes (1, 2, 4 bytes)
+    {
+        if (IsReader)
+        {
+            if (stream.RemainingBytes() >= 4)
+            {
+                uint32_t size;
+                stream >> size;
+                array.Resize(size);
+
+                auto bitsCount = sizeof(T) << 3;
+                for (uint32_t i = 0; i < size; ++i)
+                {
+                    if (stream.RemainingBits() < bitsCount)
+                        return false;
+                    stream >> array[i];
+                }
+            }
+            else
+                return false;
+        }
+        else
+        {
+            uint32_t size = array.Count();
+            stream << size;
+
+            for (uint32_t i = 0; i < size; ++i)
+                stream << array[i];
+
             return true;
         }
     }

@@ -5,6 +5,8 @@
 
 namespace Game {
 
+using Core::Collections::Queue;
+
 class Player : public Core::RefCounted {
     DeclareClassInfo;
 public:
@@ -38,17 +40,23 @@ public:
         : t(_t), px(_px), py(_py)
         { }
     };
+
+    struct NetData
+    {
+        float startX, startY;
+        // ToDo: other data
+    };
 protected:
     Type type;
-    Core::Collections::Queue<Input> inputs;
-    Core::Collections::Queue<State> states;
+    Queue<Input> inputs;
+    Queue<State> states;
 
     void RemoveOlderInputs(float t);
     void RemoveOlderStates(float t);
 
     float lastPx, lastPy, lerp;
 public:
-    Player(Type _type, float px, float py);
+    Player(Type _type, const NetData &data);
     Player(const Player &other) = delete;
     virtual ~Player();
 

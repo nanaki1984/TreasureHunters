@@ -1,27 +1,24 @@
 #pragma once
 
 #include "Core/RefCounted.h"
-#include "Core/Pool/Pool_type.h"
-
-using Core::Pool::Pool;
+#include "Core/Collections/Array_type.h"
+#include "Game/Player.h"
+#include "Network/GameRoomData.h"
 
 namespace Game {
 
-//class Entity;
+using Core::Collections::Array;
 
 class Level : public Core::RefCounted {
     DeclareClassInfo;
 protected:
-    //Pool<Entity> entities;
+    Array<SmartPtr<Player>> players;
 public:
-    Level();
+    Level(const SmartPtr<Network::GameRoomData> &roomData);
     Level(const Level &other) = delete;
     virtual ~Level();
 
     Level& operator =(const Level &other) = delete;
-/*
-    Handle<Entity> NewEntity();
-    Handle<Entity> CloneEntity(const Handle<Entity> &source);*/
 };
 
 } // namespace Game

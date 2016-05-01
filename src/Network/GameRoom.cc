@@ -4,7 +4,6 @@
 #include "Core/Memory/BlocksAllocator.h"
 #include "Core/Memory/ScratchAllocator.h"
 #include "Core/SmartPtr.h"
-#include "Core/Collections/Array.h"
 #include "Core/Time/TimeServer.h"
 #include "Network/ServerInstance.h"
 #include "Network/Messages/PlayerState.h"
@@ -22,8 +21,11 @@ GameRoom::GameRoom(uint8_t playersCount)
   startGameMsgs(GetAllocator<MallocAllocator>(), playersCount),
   lastTimestamp(.0f),
   accumulator(.0f), simTime(.0f),
-  players(GetAllocator<MallocAllocator>(), playersCount)
-{ }
+  players(GetAllocator<MallocAllocator>(), playersCount),
+  data(SmartPtr<GameRoomData>::MakeNew<MallocAllocator>())
+{
+    data->playersData.Resize(playersCount);
+}
 
 GameRoom::~GameRoom()
 {
@@ -166,11 +168,13 @@ GameRoom::Update()
         simTime += kFixedStepTime;
 
         auto it = players.Begin(), end = players.End();
-        for (; it != end; ++it)
+        uint8_t playerId = 0;
+        for (; it != end; ++it, ++playerId)
         {
             (*it)->Update(simTime);
 
             auto playerState = SmartPtr<Messages::PlayerState>::MakeNew<ScratchAllocator>();
+            playerState->id = playerId;
             playerState->t = simTime;
             playerState->x = (*it)->GetX();
             playerState->y = (*it)->GetY();
