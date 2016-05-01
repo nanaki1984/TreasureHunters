@@ -19,8 +19,8 @@ public:
 
     void RequestStop();
 
-    void Send(ENetPeer *peer, const SmartPtr<Serializable> &object, MessageType messageType);
-    void Broadcast(const Array<ENetPeer*> &peers, const SmartPtr<Serializable> &object, MessageType messageType);
+    void Send(ENetPeer *peer, const SmartPtr<Serializable> &object, MessageType messageType, uint8_t channel);
+    void Broadcast(const Array<ENetPeer*> &peers, const SmartPtr<Serializable> &object, MessageType messageType, uint8_t channel);
 
     static ServerInstance* Instance();
 };

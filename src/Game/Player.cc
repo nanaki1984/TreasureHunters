@@ -151,9 +151,12 @@ Player::Update(float t)
     float t0 = newState.t;
     if (SimulatedOnServer == type)
     {
-        float oldest = inputs.Front().t;
-        if (oldest < t0)
-            t0 = oldest;
+        if (inputs.Count() > 0)
+        {
+            float oldest = inputs.Front().t;
+            if (oldest < t0)
+                t0 = oldest;
+        }
     }
     newState.t = t;
 

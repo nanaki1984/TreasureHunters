@@ -22,9 +22,22 @@ public:
         Playing
     };
 protected:
+    struct QueuedMsg
+    {
+        SmartPtr<Serializable> object;
+        MessageType msgType;
+        uint8_t channel;
+
+        QueuedMsg()
+        { }
+
+        QueuedMsg(const SmartPtr<Serializable> &_object, MessageType _msgType, uint8_t _channel)
+        : object(_object), msgType(_msgType), channel(_channel)
+        { }
+    };
+
     ENetPeer *server;
-    Queue<SmartPtr<Serializable>> sendQueue;
-    Queue<MessageType> sendQueueMsgType;
+    Queue<QueuedMsg> sendQueue;
 
     bool active;
     State state;
@@ -54,7 +67,7 @@ public:
     void CreateRoom(uint8_t playersCount, RoomCreationCallback callback);
     void JoinRoom(uint32_t roomId, JoinRoomCallback callback);
     void StartGame(StartGameCallback callback);
-    void Send(const SmartPtr<Serializable> &object, MessageType messageType);
+    void Send(const SmartPtr<Serializable> &object, MessageType messageType, uint8_t channel);
 
     State GetState() const;
     uint8_t GetRoomId() const;

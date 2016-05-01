@@ -14,6 +14,10 @@ public class Test : MonoBehaviour {
     public delegate void StartGameCallback(bool success);
 
     [DllImport("THShared")]
+    public static extern void GameLoadLibrary();
+    [DllImport("THShared")]
+    public static extern void GameUnloadLibrary();
+    [DllImport("THShared")]
     public static extern bool GameInit(string serverHost, int serverPort, LogCallback debugLog);
     [DllImport("THShared")]
     public static extern int GameGetState();
@@ -39,9 +43,12 @@ public class Test : MonoBehaviour {
     public static extern void GameQuit();
 
     public Transform cube;
+    protected bool paused = false;
 
     void Awake()
     {
+        GameLoadLibrary();
+
         var success = GameInit("localhost", 1234, (type, str) =>
         {
             switch (type)
@@ -78,10 +85,13 @@ public class Test : MonoBehaviour {
                     GameCreateRoom(1, (roomId) =>
                     {
                         Debug.Log("CreateRoom said " + roomId);
-                        GameJoinRoom(roomId, (success) =>
+                        if (roomId != 0xffffffff)
                         {
-                            Debug.Log("JoinRoom said " + success);
-                        });
+                            GameJoinRoom(roomId, (success) =>
+                            {
+                                Debug.Log("JoinRoom said " + success);
+                            });
+                        }
                     });
                 break;
             case 2: // joined room
@@ -115,16 +125,33 @@ public class Test : MonoBehaviour {
             GameTick();
     }
 
-    void OnApplicationPause(bool paused)
+    void OnApplicationPause(bool flag)
     {
-        if (paused)
-            GamePause();
+        if (flag)
+        {
+            if (!paused)
+            {
+                Debug.LogWarning("GamePaused");
+                GamePause();
+                paused = true;
+            }
+        }
         else
-            GameResume();
+        {
+            if (paused)
+            {
+                Debug.LogWarning("GameResumed");
+                GameResume();
+                paused = false;
+            }
+        }
     }
 
     void OnApplicationQuit()
     {
         GameQuit();
+#if !UNITY_EDITOR
+        GameUnloadLibrary();
+#endif
     }
 }

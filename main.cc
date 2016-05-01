@@ -6,7 +6,6 @@
 #include "Core/Memory/BlocksAllocator.h"
 #include "Core/Memory/ScratchAllocator.h"
 #include "Network/ServerInstance.h"
-
 #include "Managers/GetManager.h"
 
 using namespace Core::Memory;
@@ -21,6 +20,8 @@ void shutdown()
     serverInstance->~ServerInstance();
     serverInstance = nullptr;
 
+    Core::ClassInfoUtils::Destroy();
+
     ShutdownMemory();
 }
 
@@ -32,13 +33,15 @@ int main(int argc, char **argv) {
 	InitAllocator<BlocksAllocator>(&GetAllocator<MallocAllocator>(), 8192);
     InitAllocator<ScratchAllocator>(&GetAllocator<MallocAllocator>(), 512 * 1024);
 
-    atexit(shutdown);
+    Core::ClassInfoUtils::Instance()->Initialize();
 
     serverInstance = new(serverInstanceBuffer) Network::ServerInstance();
     Core::Log::Instance()->SetCallback([](int msgType, const char *msg)
     {
         std::cout << msg << std::endl;
     });
+
+    atexit(shutdown);
 
     if (serverInstance->Initialize(1234))
     {

@@ -25,8 +25,9 @@ ClientInstance::ClientInstance()
   active(false),
   state(Disconnected),
   roomCreationCallback(nullptr),
-  sendQueue(GetAllocator<MallocAllocator>()),
-  sendQueueMsgType(GetAllocator<MallocAllocator>())
+  joinRoomCallback(nullptr),
+  startGameCallback(nullptr),
+  sendQueue(GetAllocator<MallocAllocator>())
 { }
 
 ClientInstance::~ClientInstance()
@@ -59,9 +60,10 @@ ClientInstance::Tick()
 
             while (sendQueue.Count() > 0)
             {
-                this->Send(sendQueue.Front(), sendQueueMsgType.Front());
+                auto queuedMsg = sendQueue.Front();
                 sendQueue.PopFront();
-                sendQueueMsgType.PopFront();
+
+                this->Send(queuedMsg.object, queuedMsg.msgType, queuedMsg.channel);
             }
             break;
         case ENET_EVENT_TYPE_DISCONNECT:
@@ -130,7 +132,7 @@ ClientInstance::Tick()
                             lastTimestamp = startGame->goTime;
                             player = SmartPtr<Game::Player>::MakeNew<MallocAllocator>(Game::Player::SimulatedLagless, .0f, .0f);
                             state = Playing;
-                            log->Write(Log::Info, "Starting game for player at time %f (now: %f).", lastTimestamp, Core::Time::TimeServer::Instance()->GetRealTime());
+                            log->Write(Log::Info, "Starting game for player at time %f (now: %f).", lastTimestamp, Core::Time::TimeServer::Instance()->GetTime());
                         }
                     }
 
@@ -157,7 +159,7 @@ ClientInstance::Tick()
     // update player
     if (Playing == state)
     {
-        float newTimestamp = Core::Time::TimeServer::Instance()->GetRealTime();
+        float newTimestamp = Core::Time::TimeServer::Instance()->GetTime();
         float dt = newTimestamp - lastTimestamp;
         if (dt > .0f)
         {
@@ -213,6 +215,11 @@ ClientInstance::RequestResume()
 void
 ClientInstance::RequestQuit()
 {
+    if (state >= Connected)
+        enet_peer_disconnect_now(server, 0);
+
+    player.Reset();
+
     auto it = managers.Begin(), end = managers.End();
     for (; it != end; ++it)
         (*it)->OnQuit();
@@ -233,7 +240,7 @@ ClientInstance::CreateRoom(uint8_t playersCount, RoomCreationCallback callback)
         createRoom->roomId = Messages::CreateRoom::kUnknownId;
         createRoom->playersCount = playersCount;
 
-        this->Send(SmartPtr<Network::Serializable>::CastFrom(createRoom), ReliableSequenced);
+        this->Send(SmartPtr<Network::Serializable>::CastFrom(createRoom), ReliableSequenced, 1);
     }
     else
         callback(Messages::CreateRoom::kUnknownId);
@@ -250,7 +257,7 @@ ClientInstance::JoinRoom(uint32_t roomId, JoinRoomCallback callback)
         joinRoom->roomId = roomId;
         joinRoom->flags = Messages::JoinRoom::Request;
 
-        this->Send(SmartPtr<Network::Serializable>::CastFrom(joinRoom), ReliableSequenced);
+        this->Send(SmartPtr<Network::Serializable>::CastFrom(joinRoom), ReliableSequenced, 1);
     }
     else
         callback(false);
@@ -269,7 +276,7 @@ ClientInstance::StartGame(StartGameCallback callback)
         startGame->flags = Messages::StartGame::Ready;
         startGame->goTime = .0f;
 
-        this->Send(SmartPtr<Network::Serializable>::CastFrom(startGame), ReliableSequenced);
+        this->Send(SmartPtr<Network::Serializable>::CastFrom(startGame), ReliableSequenced, 1);
 
         state = Waiting;
     }
@@ -278,7 +285,7 @@ ClientInstance::StartGame(StartGameCallback callback)
 }
 
 void
-ClientInstance::Send(const SmartPtr<Serializable> &object, MessageType messageType)
+ClientInstance::Send(const SmartPtr<Serializable> &object, MessageType messageType, uint8_t channel)
 {
     if (server != nullptr)
     {
@@ -287,12 +294,11 @@ ClientInstance::Send(const SmartPtr<Serializable> &object, MessageType messageTy
         object->Serialize(server, data);
         ENetPacket *packet = enet_packet_create(data.GetData(), data.GetSize(), this->MessageTypeToFlags(messageType));
 
-        enet_peer_send(server, 0, packet);
+        enet_peer_send(server, channel, packet);
     }
     else
     {
-        sendQueue.PushBack(object);
-        sendQueueMsgType.PushBack(messageType);
+        sendQueue.PushBack(QueuedMsg(object, messageType, channel));
     }
 }
 
@@ -306,7 +312,7 @@ ClientInstance::SendPlayerInputs(float x, float y)
     playerInputs->x = x;
     playerInputs->y = y;
 
-    this->Send(SmartPtr<Serializable>::CastFrom(playerInputs), Sequenced);
+    this->Send(SmartPtr<Serializable>::CastFrom(playerInputs), Sequenced, 0);
 }
 
 void

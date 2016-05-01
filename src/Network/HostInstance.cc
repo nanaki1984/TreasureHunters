@@ -41,7 +41,7 @@ HostInstance::HostInstance()
     stringsTable = SmartPtr<StringsTable>::MakeNew<LinearAllocator>(&GetAllocator<MallocAllocator>());
 
     timeServer = SmartPtr<Time::TimeServer>::MakeNew<LinearAllocator>();
-    timeServer->Pause();
+    //timeServer->Pause();
 }
 
 HostInstance::~HostInstance()
@@ -53,7 +53,7 @@ HostInstance::~HostInstance()
 bool
 HostInstance::StartServer(int port)
 {
-    ClassInfoUtils::Instance()->Initialize();
+    //ClassInfoUtils::Instance()->Initialize();
 
     ENetCallbacks callbacks;
     Memory::Zero(&callbacks);
@@ -81,7 +81,7 @@ HostInstance::StartServer(int port)
 bool
 HostInstance::Connect(const char *serverHost, int serverPort)
 {
-    ClassInfoUtils::Instance()->Initialize();
+    //ClassInfoUtils::Instance()->Initialize();
 
     ENetCallbacks callbacks;
     Memory::Zero(&callbacks);
@@ -105,7 +105,7 @@ HostInstance::Connect(const char *serverHost, int serverPort)
 
         enet_host_connect(host, &address, 2, 0);
 
-        timeServer->Resume();
+        //timeServer->Resume();
 
         return true;
     }
@@ -130,7 +130,7 @@ HostInstance::Stop()
         enet_host_destroy(host);
     enet_deinitialize();
 
-    ClassInfoUtils::Destroy();
+    //ClassInfoUtils::Destroy();
 }
 
 const SmartPtr<Managers::BaseManager>&

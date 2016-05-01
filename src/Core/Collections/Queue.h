@@ -37,7 +37,9 @@ Queue<T>::Queue(Memory::Allocator &allocator, uint32_t initialCapacity)
 : size(0),
   offset(0),
   data(allocator, initialCapacity)
-{ }
+{
+    data.Resize(initialCapacity);
+}
 
 template <typename T>
 inline
@@ -165,7 +167,9 @@ Queue<T>::Clear()
 {
     size = 0;
     offset = 0;
+    uint32_t capacity = data.Capacity();
     data.Clear();
+    data.Resize(capacity);
 }
 
 template <typename T>

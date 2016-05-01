@@ -30,7 +30,7 @@ protected:
     __int64 timeStart;
     __int64 timeFreq;
     __int64 timeCounter;
-	__int64 timePaused;
+    __int64 timePaused;
 #elif defined __APPLE__
 	mach_timebase_info_data_t timebaseInfo;
 	uint64_t machAbsTimeStart;
@@ -49,6 +49,7 @@ public:
     void Resume();
 
     uint32_t GetMilliseconds() const;
+    float GetSeconds() const;
 
     bool IsPaused() const;
     float GetRealTime() const;

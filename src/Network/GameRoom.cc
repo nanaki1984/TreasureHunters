@@ -33,7 +33,7 @@ GameRoom::~GameRoom()
         for (; it != end; ++it)
         {
             (*it)->flags = Messages::StartGame::Fail;
-            ServerInstance::Instance()->Send(peers[(*it)->playerId], SmartPtr<Network::Serializable>::CastFrom(*it), ServerInstance::ReliableSequenced);
+            ServerInstance::Instance()->Send(peers[(*it)->playerId], SmartPtr<Network::Serializable>::CastFrom(*it), ServerInstance::ReliableSequenced, 1);
         }
     }
 }
@@ -69,7 +69,7 @@ GameRoom::PlayerReady(ENetPeer *peer, const SmartPtr<Messages::StartGame> &start
             startGameMsgs.PushBack(startGame);
             if (startGameMsgs.Count() == startGameMsgs.Capacity())
             {
-                float goTime = Core::Time::TimeServer::Instance()->GetRealTime();
+                float goTime = Core::Time::TimeServer::Instance()->GetSeconds();
                 enet_uint32 maxRTT = 0;
                 for (it = peers.Begin(); it != end; ++it)
                     maxRTT = std::max(maxRTT, (*it)->roundTripTime);
@@ -82,7 +82,7 @@ GameRoom::PlayerReady(ENetPeer *peer, const SmartPtr<Messages::StartGame> &start
 
                     Core::Log::Instance()->Write(Core::Log::Info, "Starting game for player %d at time %f.", (*it2)->playerId, (*it2)->goTime);
 
-                    ServerInstance::Instance()->Send(peers[(*it2)->playerId], SmartPtr<Network::Serializable>::CastFrom(*it2), ServerInstance::ReliableSequenced);
+                    ServerInstance::Instance()->Send(peers[(*it2)->playerId], SmartPtr<Network::Serializable>::CastFrom(*it2), ServerInstance::ReliableSequenced, 1);
 
                     players.PushBack(SmartPtr<Game::Player>::MakeNew<BlocksAllocator>(Game::Player::SimulatedOnServer, .0f, .0f));
                 }
@@ -153,7 +153,7 @@ GameRoom::Update()
     if (state != Playing)
         return false;
 
-    float newTimestamp = Core::Time::TimeServer::Instance()->GetRealTime();
+    float newTimestamp = Core::Time::TimeServer::Instance()->GetSeconds();
     float dt = newTimestamp - lastTimestamp;
     if (dt <= .0f)
         return false;
@@ -175,7 +175,7 @@ GameRoom::Update()
             playerState->x = (*it)->GetX();
             playerState->y = (*it)->GetY();
 
-            ServerInstance::Instance()->Broadcast(peers, SmartPtr<Serializable>::CastFrom(playerState), HostInstance::Sequenced);
+            ServerInstance::Instance()->Broadcast(peers, SmartPtr<Serializable>::CastFrom(playerState), HostInstance::Sequenced, 0);
         }
 
         accumulator -= kFixedStepTime;

@@ -75,7 +75,7 @@ ServerInstance::Tick()
                     assert(Messages::CreateRoom::kUnknownId == createRoom->roomId);
                     createRoom->roomId = rooms.NewInstance(createRoom->playersCount)->GetInstanceID();
 
-                    this->Send(event.peer, ptr, ReliableSequenced);
+                    this->Send(event.peer, ptr, ReliableSequenced, 1);
                 }
                 else if (ptr->IsInstanceOf<Messages::JoinRoom>())
                 {
@@ -92,7 +92,7 @@ ServerInstance::Tick()
                         event.peer->data = room.Get();
                     }
 
-                    this->Send(event.peer, ptr, ReliableSequenced);
+                    this->Send(event.peer, ptr, ReliableSequenced, 1);
                 }
                 else if (ptr->IsInstanceOf<Messages::StartGame>())
                 {
@@ -104,7 +104,7 @@ ServerInstance::Tick()
                     if (!room.IsValid() ||
                         GameRoom::Playing == room->GetState() ||
                         !room->PlayerReady(event.peer, startGame))
-                        this->Send(event.peer, ptr, ReliableSequenced);
+                        this->Send(event.peer, ptr, ReliableSequenced, 1);
                 }
                 else if (ptr->IsInstanceOf<Messages::PlayerInputs>())
                 {
@@ -121,14 +121,14 @@ ServerInstance::Tick()
     }
 
     // update rooms
-    auto roomIt = rooms.Begin(), roomsEnd = rooms.End();
-    while (roomIt != roomsEnd)
+    Array<Handle<GameRoom>> roomsToDelete(GetAllocator<ScratchAllocator>());
+    for (auto roomIt = rooms.Begin(), roomsEnd = rooms.End(); roomIt < roomsEnd; ++roomIt)
     {
         if (roomIt->Update())
-            roomIt->Destroy();
-        else
-            ++roomIt;
+            roomsToDelete.PushBack(roomIt);
     }
+    for (auto delIt = roomsToDelete.Begin(), delEnd = roomsToDelete.End(); delIt < delEnd; ++delIt)
+        rooms.DeleteInstance(*delIt);
 
     auto it = managers.Begin(), end = managers.End();
     for (; it != end; ++it)
@@ -145,6 +145,8 @@ ServerInstance::Tick()
 void
 ServerInstance::RequestStop()
 {
+    rooms.Clear();
+
     auto it = managers.Begin(), end = managers.End();
     for (; it != end; ++it)
         (*it)->OnQuit();
@@ -153,18 +155,18 @@ ServerInstance::RequestStop()
 }
 
 void
-ServerInstance::Send(ENetPeer *peer, const SmartPtr<Serializable> &object, MessageType messageType)
+ServerInstance::Send(ENetPeer *peer, const SmartPtr<Serializable> &object, MessageType messageType, uint8_t channel)
 {
     BitStream data(GetAllocator<ScratchAllocator>());
 
     object->Serialize(peer, data);
     ENetPacket *packet = enet_packet_create(data.GetData(), data.GetSize(), this->MessageTypeToFlags(messageType));
 
-    enet_peer_send(peer, 0, packet);
+    enet_peer_send(peer, channel, packet);
 }
 
 void
-ServerInstance::Broadcast(const Array<ENetPeer*> &peers, const SmartPtr<Serializable> &object, MessageType messageType)
+ServerInstance::Broadcast(const Array<ENetPeer*> &peers, const SmartPtr<Serializable> &object, MessageType messageType, uint8_t channel)
 {
     if (peers.Count() > 0)
     {
@@ -176,7 +178,7 @@ ServerInstance::Broadcast(const Array<ENetPeer*> &peers, const SmartPtr<Serializ
             object->Serialize(*it, data);
             ENetPacket *packet = enet_packet_create(data.GetData(), data.GetSize(), this->MessageTypeToFlags(messageType));
 
-            enet_peer_send(*it, 0, packet);
+            enet_peer_send(*it, channel, packet);
         }
     }
 }

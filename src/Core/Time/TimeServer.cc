@@ -60,7 +60,7 @@ TimeServer::Tick()
     realTime = nanosec * 0.000000001f;
 #endif
 
-    totalTime = realTime - totalPauseTime;
+    totalTime = paused ? oldTotalTime : (realTime - totalPauseTime);
     deltaTime = totalTime - oldTotalTime;
 
     auto it = sources.Begin(), end = sources.End();
@@ -124,6 +124,12 @@ TimeServer::GetMilliseconds() const
     uint64_t nanosec = ((absTime - machAbsTimeStart) * timebaseInfo.numer) / timebaseInfo.denom;
     return nanosec * 0.000001f;
 #endif
+}
+
+float
+TimeServer::GetSeconds() const
+{
+    return this->GetMilliseconds() * 0.001f;
 }
 
     }; // namespace Time

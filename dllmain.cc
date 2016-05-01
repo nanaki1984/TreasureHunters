@@ -26,7 +26,7 @@ extern "C"
     Network::ClientInstance *clientInstance = nullptr;
     char clientInstanceBuffer[sizeof(Network::ClientInstance)];
 
-    bool EXPORT_API GameInit(const char *serverHost, int serverPort, Core::Log::LogFunction debugLog)
+    void EXPORT_API GameLoadLibrary()
     {
         Core::Memory::InitializeMemory();
 
@@ -35,6 +35,18 @@ extern "C"
         Core::Memory::InitAllocator<BlocksAllocator>(&GetAllocator<MallocAllocator>(), 8192);
         Core::Memory::InitAllocator<ScratchAllocator>(&GetAllocator<MallocAllocator>(), 512 * 1024);
 
+        Core::ClassInfoUtils::Instance()->Initialize();
+    }
+
+    void EXPORT_API GameUnloadLibrary()
+    {
+        Core::ClassInfoUtils::Destroy();
+
+        Core::Memory::ShutdownMemory();
+    }
+
+    bool EXPORT_API GameInit(const char *serverHost, int serverPort, Core::Log::LogFunction debugLog)
+    {
         clientInstance = new(clientInstanceBuffer) Network::ClientInstance();
         Core::Log::Instance()->SetCallback(debugLog);
 
@@ -96,8 +108,6 @@ extern "C"
         clientInstance->RequestQuit();
         clientInstance->~ClientInstance();
         clientInstance = nullptr;
-
-        Core::Memory::ShutdownMemory();
     }
 }
 /*

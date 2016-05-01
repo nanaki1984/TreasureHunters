@@ -121,7 +121,7 @@ template <typename T>
 inline void
 Pool<T>::DeleteInstance(const Handle<T> &handle)
 {
-    this->Free(handle->GetInstanceID());
+    this->Free(handle.Get());
 }
 
     } // namespace Pool
