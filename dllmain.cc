@@ -93,6 +93,11 @@ extern "C"
         clientInstance->GetPlayerPosition(x, y);
     }
 
+    void EXPORT_API GameReceiveEnemyPosition(float *x, float *y)
+    {
+        clientInstance->GetEnemyPosition(0, x, y);
+    }
+
     void EXPORT_API GamePause()
     {
         clientInstance->RequestPause();

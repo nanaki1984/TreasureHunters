@@ -19,11 +19,15 @@ protected:
         if (Success == flags)
         {
             if (Stream::IsWriting)
+            {
                 stream.SerializeArray(roomData->playersData);
+                stream.SerializeArray(roomData->enemiesData);
+            }
             else
             {
                 roomData = SmartPtr<GameRoomData>::MakeNew<Core::Memory::MallocAllocator>();
                 stream.SerializeArray(roomData->playersData);
+                stream.SerializeArray(roomData->enemiesData);
             }
         }
     }

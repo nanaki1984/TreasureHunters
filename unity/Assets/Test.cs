@@ -36,6 +36,8 @@ public class Test : MonoBehaviour {
     [DllImport("THShared")]
     public static extern void GameReceivePosition(out float x, out float y);
     [DllImport("THShared")]
+    public static extern void GameReceiveEnemyPosition(out float x, out float y);
+    [DllImport("THShared")]
     public static extern void GamePause();
     [DllImport("THShared")]
     public static extern void GameResume();
@@ -43,6 +45,7 @@ public class Test : MonoBehaviour {
     public static extern void GameQuit();
 
     public Transform cube;
+    public Transform enemy;
     protected bool paused = false;
 
     void Awake()
@@ -120,6 +123,9 @@ public class Test : MonoBehaviour {
             float x, y;
             GameReceivePosition(out x, out y);
             cube.position = new Vector3(x, .0f, y);
+
+            GameReceiveEnemyPosition(out x, out y);
+            enemy.position = new Vector3(x, .0f, y);
         }
         else
             GameTick();

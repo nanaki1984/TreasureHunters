@@ -1,32 +1,22 @@
 #pragma once
 
 #include "Core/RefCounted.h"
+#include "Core/Collections/Array_type.h"
 #include "Core/Collections/Queue_type.h"
+#include "Math/Vector2.h"
 
 namespace Game {
 
+using Core::Collections::Array;
 using Core::Collections::Queue;
 
-class Player : public Core::RefCounted {
+class Enemy : public Core::RefCounted {
     DeclareClassInfo;
 public:
     enum Type
     {
         SimulatedOnServer = 0,  // server
-        SimulatedLagless,       // client - user player
         Cloned                  // client - other players
-    };
-
-    struct Input
-    {
-        float t, x, y;
-
-        Input()
-        { }
-
-        Input(float _t, float _x, float _y)
-        : t(_t), x(_x), y(_y)
-        { }
     };
 
     struct State
@@ -43,28 +33,23 @@ public:
 
     struct NetData
     {
-        float startX, startY;
-        // ToDo: other data
+        float p0x, p0y;
+        float p1x, p1y;
+        float p2x, p2y;
     };
 protected:
     Type type;
-    Queue<Input> inputs;
     Queue<State> states;
-
-    void RemoveOlderInputs(float t);
-    void RemoveOlderStates(float t);
-
-    float lastPx, lastPy, lerp;
-    float lastInputT;
+    Array<Math::Vector2> waypoints;
+    uint8_t waypointIndex;
 public:
-    Player(Type _type, const NetData &data);
-    Player(const Player &other) = delete;
-    virtual ~Player();
+    Enemy(Type _type, const NetData &data);
+    Enemy(const Enemy &other) = delete;
+    virtual ~Enemy();
 
-    Player& operator =(const Player &other) = delete;
+    Enemy& operator =(const Enemy &other) = delete;
 
-    void SendInput(float t, float x, float y);
-    void SendPlayerState(float t, float px, float py);
+    void SendEnemyState(float t, float px, float py);
 
     void Update(float t);
 
@@ -75,8 +60,8 @@ public:
     void GetPositionAtTime(float t, float *x, float *y);
 };
 
-inline Player::Type
-Player::GetType() const
+inline Enemy::Type
+Enemy::GetType() const
 {
     return type;
 }

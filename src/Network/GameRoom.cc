@@ -7,6 +7,7 @@
 #include "Core/Time/TimeServer.h"
 #include "Network/ServerInstance.h"
 #include "Network/Messages/PlayerState.h"
+#include "Network/Messages/EnemyState.h"
 
 using namespace Core::Memory;
 
@@ -24,6 +25,14 @@ GameRoom::GameRoom(uint8_t playersCount)
   data(SmartPtr<GameRoomData>::MakeNew<MallocAllocator>())
 {
     data->playersData.Resize(playersCount);
+    data->enemiesData.Resize(1);
+    auto &enemyData = data->enemiesData[0];
+    enemyData.p0x = -10.0f;
+    enemyData.p0y = 10.0f;
+    enemyData.p1x = 10.0f;
+    enemyData.p1y = 10.0f;
+    enemyData.p2x = 0.0f;
+    enemyData.p2y = -10.0f;
 }
 
 GameRoom::~GameRoom()
@@ -179,10 +188,21 @@ GameRoom::Update()
             auto playerState = SmartPtr<Messages::PlayerState>::MakeNew<ScratchAllocator>();
             playerState->id = playerId;
             playerState->t = simTime;
-            playerState->x = (*it)->GetX();
-            playerState->y = (*it)->GetY();
+            (*it)->GetCurrentPosition(&playerState->x, &playerState->y);
 
             ServerInstance::Instance()->Broadcast(peers, SmartPtr<Serializable>::CastFrom(playerState), HostInstance::Sequenced, 0);
+        }
+
+        auto it2 = level->EnemiesBegin(), end2 = level->EnemiesEnd();
+        uint8_t enemyId = 0;
+        for (; it2 != end2; ++it2, ++enemyId)
+        {
+            auto enemyState = SmartPtr<Messages::EnemyState>::MakeNew<ScratchAllocator>();
+            enemyState->id = enemyId;
+            enemyState->t = simTime;
+            (*it2)->GetCurrentPosition(&enemyState->x, &enemyState->y);
+
+            ServerInstance::Instance()->Broadcast(peers, SmartPtr<Serializable>::CastFrom(enemyState), HostInstance::Sequenced, 0);
         }
 
         accumulator -= kFixedStepTime;

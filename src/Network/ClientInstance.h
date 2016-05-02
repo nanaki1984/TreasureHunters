@@ -77,6 +77,7 @@ public:
 
     void SendPlayerInputs(float x, float y);
     void GetPlayerPosition(float *x, float *y);
+    void GetEnemyPosition(uint8_t enemyId, float *x, float *y);
 
     static ClientInstance* Instance();
 };

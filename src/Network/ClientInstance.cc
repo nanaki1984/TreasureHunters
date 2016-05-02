@@ -9,6 +9,7 @@
 #include "Network/Messages/StartGame.h"
 #include "Network/Messages/PlayerState.h"
 #include "Network/Messages/PlayerInputs.h"
+#include "Network/Messages/EnemyState.h"
 
 using namespace Core;
 using namespace Core::IO;
@@ -156,6 +157,16 @@ ClientInstance::Tick()
 
                         if (playerState->id == playerId && simTime < player->GetLastTimestamp()) // !!!! VERY IMPORTANT, needed for the client to sync with server
                             simTime = player->GetLastTimestamp();
+                    }
+                }
+                else if (ptr->IsInstanceOf<Messages::EnemyState>())
+                {
+                    if (level.IsValid() && Playing == state && !timeServer->IsPaused())
+                    {
+                        auto enemyState = SmartPtr<Messages::EnemyState>::CastFrom(ptr);
+
+                        auto enemy = level->GetEnemy(enemyState->id);
+                        enemy->SendEnemyState(enemyState->t, enemyState->x, enemyState->y);
                     }
                 }
             }
@@ -318,10 +329,10 @@ ClientInstance::Send(const SmartPtr<Serializable> &object, MessageType messageTy
 void
 ClientInstance::SendPlayerInputs(float x, float y)
 {
-    level->GetPlayer(playerId)->SendInput(simTime, x, y);
+    level->GetPlayer(playerId)->SendInput(simTime + kFixedStepTime, x, y);
 
     auto playerInputs = SmartPtr<Messages::PlayerInputs>::MakeNew<ScratchAllocator>();
-    playerInputs->t = simTime;
+    playerInputs->t = simTime + kFixedStepTime;
     playerInputs->x = x;
     playerInputs->y = y;
 
@@ -332,11 +343,14 @@ void
 ClientInstance::GetPlayerPosition(float *x, float *y)
 {
     if (level.IsValid())
-    {
-        auto player = level->GetPlayer(playerId);
-        *x = player->GetX();
-        *y = player->GetY();
-    }
+        level->GetPlayer(playerId)->GetCurrentPosition(x, y);
+}
+
+void
+ClientInstance::GetEnemyPosition(uint8_t enemyId, float *x, float *y)
+{
+    if (level.IsValid())
+        level->GetEnemy(enemyId)->GetPositionAtTime(simTime - 0.1f, x, y);
 }
 
 }; // namespace Network

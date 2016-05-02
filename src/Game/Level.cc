@@ -11,7 +11,8 @@ namespace Game {
 DefineClassInfo(Game::Level, Core::RefCounted);
 
 Level::Level()
-: players(GetAllocator<MallocAllocator>())
+: players(GetAllocator<MallocAllocator>()),
+  enemies(GetAllocator<MallocAllocator>())
 { }
 
 Level::~Level()
@@ -26,6 +27,14 @@ Level::Init(const SmartPtr<Network::GameRoomData> &roomData)
         players.PushBack(SmartPtr<Player>::MakeNew<BlocksAllocator>(
             Player::SimulatedOnServer,
             roomData->playersData[id]));
+
+    id = 0;
+    count = roomData->enemiesData.Count();
+    enemies.Reserve(count);
+    for (; id < count; ++id)
+        enemies.PushBack(SmartPtr<Enemy>::MakeNew<BlocksAllocator>(
+            Enemy::SimulatedOnServer,
+            roomData->enemiesData[id]));
 }
 
 void
@@ -37,6 +46,14 @@ Level::Init(const SmartPtr<Network::GameRoomData> &roomData, uint8_t clientPlaye
         players.PushBack(SmartPtr<Player>::MakeNew<BlocksAllocator>(
             id == clientPlayerId ? Player::SimulatedLagless : Player::Cloned,
             roomData->playersData[id]));
+
+    id = 0;
+    count = roomData->enemiesData.Count();
+    enemies.Reserve(count);
+    for (; id < count; ++id)
+        enemies.PushBack(SmartPtr<Enemy>::MakeNew<BlocksAllocator>(
+            Enemy::Cloned,
+            roomData->enemiesData[id]));
 }
 
 void
@@ -48,9 +65,13 @@ Level::DeletePlayer(uint8_t playerId)
 void
 Level::Update(float simTime)
 {
-    auto it = players.Begin(), end = players.End();
-    for (; it != end; ++it)
-        (*it)->Update(simTime);
+    auto plyIt = players.Begin(), plyEnd = players.End();
+    for (; plyIt != plyEnd; ++plyIt)
+        (*plyIt)->Update(simTime);
+
+    auto enmIt = enemies.Begin(), enmEnd = enemies.End();
+    for (; enmIt != enmEnd; ++enmIt)
+        (*enmIt)->Update(simTime);
 }
 
 } // namespace Game

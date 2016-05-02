@@ -2,7 +2,6 @@
 
 #include "Core/RefCounted.h"
 #include "Core/Collections/Array_type.h"
-#include "Game/Player.h"
 #include "Network/GameRoomData.h"
 
 namespace Game {
@@ -14,6 +13,7 @@ class Level : public Core::RefCounted {
 protected:
     uint8_t userPlayerId;
     Array<SmartPtr<Player>> players;
+    Array<SmartPtr<Enemy>> enemies;
 public:
     Level();
     Level(const Level &other) = delete;
@@ -29,6 +29,10 @@ public:
     const SmartPtr<Player>& GetPlayer(uint8_t playerId) const;
     const SmartPtr<Player>* PlayersBegin() const;
     const SmartPtr<Player>* PlayersEnd() const;
+
+    const SmartPtr<Enemy>& GetEnemy(uint8_t enemyId) const;
+    const SmartPtr<Enemy>* EnemiesBegin() const;
+    const SmartPtr<Enemy>* EnemiesEnd() const;
 };
 
 inline const SmartPtr<Player>&
@@ -47,6 +51,24 @@ inline const SmartPtr<Player>*
 Level::PlayersEnd() const
 {
     return players.End();
+}
+
+inline const SmartPtr<Enemy>&
+Level::GetEnemy(uint8_t enemyId) const
+{
+    return enemies[enemyId];
+}
+
+inline const SmartPtr<Enemy>*
+Level::EnemiesBegin() const
+{
+    return enemies.Begin();
+}
+
+inline const SmartPtr<Enemy>*
+Level::EnemiesEnd() const
+{
+    return enemies.End();
 }
 
 } // namespace Game

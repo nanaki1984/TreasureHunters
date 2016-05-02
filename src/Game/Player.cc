@@ -20,25 +20,14 @@ Player::Player(Type _type, const NetData &data)
   states(GetAllocator<MallocAllocator>(), 8),
   lastPx(data.startX),
   lastPy(data.startY),
-  lerp(1.0f)
+  lerp(1.0f),
+  lastInputT(0.0f)
 {
     states.PushBack(State(.0f, data.startX, data.startY));
 }
 
 Player::~Player()
 { }
-
-float
-Player::GetX() const
-{
-    return Math::Lerp(lastPx, states.Back().px, lerp);
-}
-
-float
-Player::GetY() const
-{
-    return Math::Lerp(lastPy, states.Back().py, lerp);
-}
 
 float
 Player::GetLastTimestamp() const
@@ -101,14 +90,17 @@ Player::SendPlayerState(float t, float px, float py)
     }
     else // simulated on client, lagless
     {
-        float tDiff = states.Back().t - t;
+        float lastTimestamp = states.Back().t;
 
         this->RemoveOlderInputs(t);
+
+        float cPx, cPy;
+        this->GetPositionAtTime(t, &cPx, &cPy);
         this->RemoveOlderStates(t);
 
         if (0 == states.Count())
         {
-            Core::Log::Instance()->Write(Core::Log::Info, "Recv newer player state %f,%f @ %f - tDiff: %f", px, py, t, tDiff);
+            Core::Log::Instance()->Write(Core::Log::Info, "Recv newer player state %f,%f @ %f (now: %f)", px, py, t, lastTimestamp);
 
             states.PushBack(State(t, px, py));
 
@@ -116,21 +108,18 @@ Player::SendPlayerState(float t, float px, float py)
         }
         else
         { // check old states for errors
-            State state = states.Front();
             Vector2 serverPos = Vector2(px, py);
-            Vector2 clientPos = Vector2(state.px, state.py);
+            Vector2 clientPos = Vector2(cPx, cPy);
             float sqDist = (serverPos - clientPos).GetSqrMagnitude();
-            tDiff = state.t - t;
 
-            //Core::Log::Instance()->Write(Core::Log::Info, "Recv player state %f,%f @ %f - sqDist: %f, tDiff: %f", px, py, t, sqDist, tDiff);
+            //Core::Log::Instance()->Write(Core::Log::Info, "Recv player state %f,%f @ %f - sqDist: %f", px, py, t, sqDist);
 
-            if (sqDist > 0.04f)
+            if (sqDist > 0.25f)//0.0625f)//0.04f)
             {
                 float newStateTime = states.Back().t;
 
-                lastPx = this->GetX();
-                lastPy = this->GetY();
-                lerp   = .0f;
+                this->GetCurrentPosition(&lastPx, &lastPy);
+                lerp = .0f;
 
                 // resimulate with inputs
                 states.Clear();
@@ -144,11 +133,12 @@ Player::SendPlayerState(float t, float px, float py)
 void
 Player::Update(float t)
 {
-    assert(type != Cloned);
+    if (Cloned == type)
+        return;
 
     State newState = states.Back();
 
-    float t0 = newState.t;
+    float t0 = lastInputT;// newState.t;
     if (SimulatedOnServer == type)
     {
         if (inputs.Count() > 0)
@@ -157,6 +147,7 @@ Player::Update(float t)
             if (oldest < t0)
                 t0 = oldest;
         }
+        //this->RemoveOlderInputs(t0);
     }
     newState.t = t;
 
@@ -174,8 +165,11 @@ Player::Update(float t)
             else
                 v = Vector2::Zero;
 
+            //Core::Log::Instance()->Write(Core::Log::Info, "input dt: %f", (input.t - t0));
+
             newState.px += v.x * 10.0f * (input.t - t0);
             newState.py += v.y * 10.0f * (input.t - t0);
+
             t0 = input.t;
 
             inputs.PopFront();
@@ -184,6 +178,8 @@ Player::Update(float t)
             break;
     }
 
+    lastInputT = t0;
+
     if (states.Capacity() == states.Count())
         states.PopFront();
 
@@ -191,7 +187,7 @@ Player::Update(float t)
 
     if (SimulatedLagless == type)
     {
-        lerp += Network::ClientInstance::kFixedStepTime * 6.0f;
+        lerp += Network::ClientInstance::kFixedStepTime * 12.0f;
         if (lerp >= 1.0f)
         {
             lastPx = states.Back().px;
@@ -199,6 +195,34 @@ Player::Update(float t)
             lerp   = 1.0f;
         }
     }
+}
+
+void
+Player::GetCurrentPosition(float *x, float *y)
+{
+    auto &s = states.Back();
+    *x = Math::Lerp(lastPx, s.px, lerp);
+    *y = Math::Lerp(lastPy, s.py, lerp);
+}
+
+void
+Player::GetPositionAtTime(float t, float *x, float *y)
+{
+    int i = 0, count = states.Count() - 1;
+    for (; i < count; ++i)
+    {
+        auto &s0 = states[i],
+             &s1 = states[i + 1];
+        if (s0.t <= t && s1.t > t)
+        {
+            float s = (t - s0.t) / (s1.t - s0.t);
+            *x = Math::Lerp(s0.px, s1.px, s);
+            *y = Math::Lerp(s0.py, s1.py, s);
+            return;
+        }
+    }
+    *x = states.Back().px;
+    *y = states.Back().py;
 }
 
 } // namespace Game
