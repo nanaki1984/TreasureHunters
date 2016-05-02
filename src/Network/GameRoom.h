@@ -8,7 +8,7 @@
 #include "Core/Collections/Array_type.h"
 #include "Network/Messages/StartGame.h"
 #include "Network/Messages/PlayerInputs.h"
-#include "Game/Player.h"
+#include "Game/Level.h"
 #include "Network/GameRoomData.h"
 
 namespace Network {
@@ -33,9 +33,9 @@ protected:
 
     float lastTimestamp;
     float accumulator, simTime;
-    Array<SmartPtr<Game::Player>> players;
 
     SmartPtr<GameRoomData> data;
+    SmartPtr<Game::Level> level;
 public:
     const float kFixedStepTime = 0.05f;
 

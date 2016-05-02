@@ -21,7 +21,6 @@ GameRoom::GameRoom(uint8_t playersCount)
   startGameMsgs(GetAllocator<MallocAllocator>(), playersCount),
   lastTimestamp(.0f),
   accumulator(.0f), simTime(.0f),
-  players(GetAllocator<MallocAllocator>(), playersCount),
   data(SmartPtr<GameRoomData>::MakeNew<MallocAllocator>())
 {
     data->playersData.Resize(playersCount);
@@ -38,6 +37,9 @@ GameRoom::~GameRoom()
             ServerInstance::Instance()->Send(peers[(*it)->playerId], SmartPtr<Network::Serializable>::CastFrom(*it), ServerInstance::ReliableSequenced, 1);
         }
     }
+
+    level.Reset();
+    data.Reset();
 }
 
 void
@@ -85,8 +87,6 @@ GameRoom::PlayerReady(ENetPeer *peer, const SmartPtr<Messages::StartGame> &start
                     Core::Log::Instance()->Write(Core::Log::Info, "Starting game for player %d at time %f.", (*it2)->playerId, (*it2)->goTime);
 
                     ServerInstance::Instance()->Send(peers[(*it2)->playerId], SmartPtr<Network::Serializable>::CastFrom(*it2), ServerInstance::ReliableSequenced, 1);
-
-                    players.PushBack(SmartPtr<Game::Player>::MakeNew<BlocksAllocator>(Game::Player::SimulatedOnServer, .0f, .0f));
                 }
 
                 startGameMsgs.Clear();
@@ -94,6 +94,9 @@ GameRoom::PlayerReady(ENetPeer *peer, const SmartPtr<Messages::StartGame> &start
 
                 accumulator = simTime = .0f;
                 lastTimestamp = goTime;
+
+                level = SmartPtr<Game::Level>::MakeNew<BlocksAllocator>();
+                level->Init(data);
 
                 state = Playing;
             }
@@ -130,7 +133,7 @@ GameRoom::PlayerLeft(ENetPeer *peer)
             }
             return true;
         case Network::GameRoom::Playing:
-            players.RemoveAt(playerId);
+            level->DeletePlayer(playerId);
             return 0 == peers.Count();
         }
     }
@@ -142,7 +145,7 @@ GameRoom::RecvPlayerInputs(ENetPeer *peer, const SmartPtr<Messages::PlayerInputs
 {
     int32_t playerId = peers.IndexOf(peer);
     if (playerId > -1)
-        players[playerId]->SendInput(playerInputs->t, playerInputs->x, playerInputs->y);
+        level->GetPlayer(playerId)->SendInput(playerInputs->t, playerInputs->x, playerInputs->y);
 }
 
 bool
@@ -167,12 +170,12 @@ GameRoom::Update()
     {
         simTime += kFixedStepTime;
 
-        auto it = players.Begin(), end = players.End();
+        level->Update(simTime);
+
+        auto it = level->PlayersBegin(), end = level->PlayersEnd();
         uint8_t playerId = 0;
         for (; it != end; ++it, ++playerId)
         {
-            (*it)->Update(simTime);
-
             auto playerState = SmartPtr<Messages::PlayerState>::MakeNew<ScratchAllocator>();
             playerState->id = playerId;
             playerState->t = simTime;

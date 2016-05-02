@@ -3,7 +3,7 @@
 #include "Network/HostInstance.h"
 #include "Network/Serializable.h"
 #include "Core/Collections/Queue_type.h"
-#include "Game/Player.h"
+#include "Game/Level.h"
 
 namespace Network {
 
@@ -50,7 +50,8 @@ protected:
     uint8_t playerId;
     float lastTimestamp;
     float accumulator, simTime;
-    SmartPtr<Game::Player> player;
+    SmartPtr<GameRoomData> joinedRoomData;
+    SmartPtr<Game::Level> level;
 public:
     static const float kFixedStepTime;
 

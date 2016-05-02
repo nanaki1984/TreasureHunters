@@ -67,9 +67,16 @@ public:
 
     void Update(float t);
 
+    Type GetType() const;
     float GetX() const;
     float GetY() const;
     float GetLastTimestamp() const;
 };
+
+inline Player::Type
+Player::GetType() const
+{
+    return type;
+}
 
 } // namespace Game

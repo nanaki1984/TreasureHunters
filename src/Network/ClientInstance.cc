@@ -75,8 +75,8 @@ ClientInstance::Tick()
             server = nullptr;
             event.peer->data = nullptr;
 
-            if (Playing == state)
-                player.Reset();
+            joinedRoomData.Reset();
+            level.Reset();
 
             state = Disconnected;
             break;
@@ -109,6 +109,7 @@ ClientInstance::Tick()
                         if (success)
                         {
                             roomId = joinRoom->roomId;
+                            joinedRoomData = joinRoom->roomData;
                             state = JoinedRoom;
                             log->Write(Log::Info, "Joined room %u.", roomId);
                         }
@@ -130,7 +131,11 @@ ClientInstance::Tick()
                             playerId = startGame->playerId;
                             accumulator = simTime = .0f;
                             lastTimestamp = startGame->goTime;
-                            player = SmartPtr<Game::Player>::MakeNew<MallocAllocator>(Game::Player::SimulatedLagless, .0f, .0f);
+
+                            level = SmartPtr<Game::Level>::MakeNew<BlocksAllocator>();
+                            level->Init(joinedRoomData, playerId);
+                            joinedRoomData.Reset();
+
                             state = Playing;
                             log->Write(Log::Info, "Starting game for player at time %f (now: %f).", lastTimestamp, Core::Time::TimeServer::Instance()->GetTime());
                         }
@@ -142,11 +147,14 @@ ClientInstance::Tick()
                 }
                 else if (ptr->IsInstanceOf<Messages::PlayerState>())
                 {
-                    if (player.IsValid() && Playing == state && !timeServer->IsPaused())
+                    if (level.IsValid() && Playing == state && !timeServer->IsPaused())
                     {
                         auto playerState = SmartPtr<Messages::PlayerState>::CastFrom(ptr);
+
+                        auto player = level->GetPlayer(playerState->id);
                         player->SendPlayerState(playerState->t, playerState->x, playerState->y);
-                        if (simTime < player->GetLastTimestamp()) // !!!! VERY IMPORTANT, needed for the client to sync with server
+
+                        if (playerState->id == playerId && simTime < player->GetLastTimestamp()) // !!!! VERY IMPORTANT, needed for the client to sync with server
                             simTime = player->GetLastTimestamp();
                     }
                 }
@@ -168,10 +176,11 @@ ClientInstance::Tick()
             accumulator += dt;
             while (accumulator >= kFixedStepTime)
             {
-                accumulator -= kFixedStepTime;
                 simTime += kFixedStepTime;
 
-                player->Update(simTime);
+                level->Update(simTime);
+
+                accumulator -= kFixedStepTime;
             }
         }
     }
@@ -221,7 +230,8 @@ ClientInstance::RequestQuit()
     if (state >= Connected)
         enet_peer_disconnect_now(server, 0);
 
-    player.Reset();
+    joinedRoomData.Reset();
+    level.Reset();
 
     auto it = managers.Begin(), end = managers.End();
     for (; it != end; ++it)
@@ -308,7 +318,7 @@ ClientInstance::Send(const SmartPtr<Serializable> &object, MessageType messageTy
 void
 ClientInstance::SendPlayerInputs(float x, float y)
 {
-    player->SendInput(simTime, x, y);
+    level->GetPlayer(playerId)->SendInput(simTime, x, y);
 
     auto playerInputs = SmartPtr<Messages::PlayerInputs>::MakeNew<ScratchAllocator>();
     playerInputs->t = simTime;
@@ -321,8 +331,9 @@ ClientInstance::SendPlayerInputs(float x, float y)
 void
 ClientInstance::GetPlayerPosition(float *x, float *y)
 {
-    if (player.IsValid())
+    if (level.IsValid())
     {
+        auto player = level->GetPlayer(playerId);
         *x = player->GetX();
         *y = player->GetY();
     }
