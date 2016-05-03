@@ -45,6 +45,27 @@ ClientInstance::Tick()
 {
     timeServer->Tick();
 
+    // update player
+    if (Playing == state && !timeServer->IsPaused())
+    {
+        float newTimestamp = Core::Time::TimeServer::Instance()->GetRealTime();// GetTime();
+        float dt = newTimestamp - lastTimestamp;
+        if (dt > .0f)
+        {
+            lastTimestamp = newTimestamp;
+
+            accumulator += dt;
+            while (accumulator >= kFixedStepTime)
+            {
+                simTime += kFixedStepTime;
+
+                level->Update(simTime);
+
+                accumulator -= kFixedStepTime;
+            }
+        }
+    }
+
     ENetEvent event;
     while (enet_host_service(host, &event, 0) > 0)
     {
@@ -138,7 +159,7 @@ ClientInstance::Tick()
                             joinedRoomData.Reset();
 
                             state = Playing;
-                            log->Write(Log::Info, "Starting game for player at time %f (now: %f).", lastTimestamp, Core::Time::TimeServer::Instance()->GetTime());
+                            log->Write(Log::Info, "Starting game for player at time %f (now: %f).", lastTimestamp, Core::Time::TimeServer::Instance()->GetRealTime());// GetTime());
                         }
                     }
 
@@ -154,9 +175,9 @@ ClientInstance::Tick()
 
                         auto player = level->GetPlayer(playerState->id);
                         player->SendPlayerState(playerState->t, playerState->x, playerState->y);
-
+                        /*
                         if (playerState->id == playerId && simTime < player->GetLastTimestamp()) // !!!! VERY IMPORTANT, needed for the client to sync with server
-                            simTime = player->GetLastTimestamp();
+                            simTime += ceilf((player->GetLastTimestamp() - simTime) / kFixedStepTime) * kFixedStepTime;*/
                     }
                 }
                 else if (ptr->IsInstanceOf<Messages::EnemyState>())
@@ -172,27 +193,6 @@ ClientInstance::Tick()
             }
             enet_packet_destroy(event.packet);
             break;
-        }
-    }
-
-    // update player
-    if (Playing == state && !timeServer->IsPaused())
-    {
-        float newTimestamp = Core::Time::TimeServer::Instance()->GetTime();
-        float dt = newTimestamp - lastTimestamp;
-        if (dt > .0f)
-        {
-            lastTimestamp = newTimestamp;
-
-            accumulator += dt;
-            while (accumulator >= kFixedStepTime)
-            {
-                simTime += kFixedStepTime;
-
-                level->Update(simTime);
-
-                accumulator -= kFixedStepTime;
-            }
         }
     }
 
@@ -229,9 +229,6 @@ ClientInstance::RequestResume()
         auto it = managers.Begin(), end = managers.End();
         for (; it != end; ++it)
             (*it)->OnResume();
-
-        if (Playing == state)
-            lastTimestamp = Core::Time::TimeServer::Instance()->GetTime();
     }
 }
 
@@ -329,10 +326,10 @@ ClientInstance::Send(const SmartPtr<Serializable> &object, MessageType messageTy
 void
 ClientInstance::SendPlayerInputs(float x, float y)
 {
-    level->GetPlayer(playerId)->SendInput(simTime + kFixedStepTime, x, y);
+    level->GetPlayer(playerId)->SendInput(simTime/* + kFixedStepTime*/, x, y);
 
     auto playerInputs = SmartPtr<Messages::PlayerInputs>::MakeNew<ScratchAllocator>();
-    playerInputs->t = simTime + kFixedStepTime;
+    playerInputs->t = simTime;// + kFixedStepTime;
     playerInputs->x = x;
     playerInputs->y = y;
 

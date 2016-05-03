@@ -105,6 +105,8 @@ Player::SendPlayerState(float t, float px, float py)
             states.PushBack(State(t, px, py));
 
             // no lerp, just snap
+            lastPx = px;
+            lastPy = py;
         }
         else
         { // check old states for errors
@@ -116,12 +118,11 @@ Player::SendPlayerState(float t, float px, float py)
 
             if (sqDist > 0.25f)//0.0625f)//0.04f)
             {
-                float newStateTime = states.Back().t;
-
-                this->GetCurrentPosition(&lastPx, &lastPy);
-                lerp = .0f;
+                // start lerping from last state
+                lerp = 0.0f;
 
                 // resimulate with inputs
+                float newStateTime = states.Back().t;
                 states.Clear();
                 states.PushBack(State(t, px, py));
                 this->Update(newStateTime);
@@ -165,7 +166,7 @@ Player::Update(float t)
             else
                 v = Vector2::Zero;
 
-            //Core::Log::Instance()->Write(Core::Log::Info, "input dt: %f", (input.t - t0));
+            Core::Log::Instance()->Write(Core::Log::Info, "input dt: %f", (input.t - t0));
 
             newState.px += v.x * 10.0f * (input.t - t0);
             newState.py += v.y * 10.0f * (input.t - t0);
@@ -187,12 +188,18 @@ Player::Update(float t)
 
     if (SimulatedLagless == type)
     {
-        lerp += Network::ClientInstance::kFixedStepTime * 12.0f;
+        auto &s = states.Back();
+        float dt = Network::ClientInstance::kFixedStepTime;
+        lerp += dt;
         if (lerp >= 1.0f)
         {
-            lastPx = states.Back().px;
-            lastPy = states.Back().py;
-            lerp   = 1.0f;
+            lastPx = s.px;
+            lastPy = s.py;
+        }
+        else
+        {
+            lastPx += (s.px - lastPx) * std::min(1.0f, dt * 12.0f);
+            lastPy += (s.py - lastPy) * std::min(1.0f, dt * 12.0f);
         }
     }
 }
@@ -201,8 +208,16 @@ void
 Player::GetCurrentPosition(float *x, float *y)
 {
     auto &s = states.Back();
-    *x = Math::Lerp(lastPx, s.px, lerp);
-    *y = Math::Lerp(lastPy, s.py, lerp);
+    if (SimulatedLagless == type)
+    {
+        *x = lastPx;
+        *y = lastPy;
+    }
+    else
+    {
+        *x = s.px;
+        *y = s.py;
+    }
 }
 
 void

@@ -177,6 +177,7 @@ GameRoom::Update()
     accumulator += dt;
     while (accumulator >= kFixedStepTime)
     {
+        //float prevSimTime = simTime;
         simTime += kFixedStepTime;
 
         level->Update(simTime);
@@ -187,7 +188,7 @@ GameRoom::Update()
         {
             auto playerState = SmartPtr<Messages::PlayerState>::MakeNew<ScratchAllocator>();
             playerState->id = playerId;
-            playerState->t = simTime;
+            playerState->t = simTime;// prevSimTime;
             (*it)->GetCurrentPosition(&playerState->x, &playerState->y);
 
             ServerInstance::Instance()->Broadcast(peers, SmartPtr<Serializable>::CastFrom(playerState), HostInstance::Sequenced, 0);
@@ -199,7 +200,7 @@ GameRoom::Update()
         {
             auto enemyState = SmartPtr<Messages::EnemyState>::MakeNew<ScratchAllocator>();
             enemyState->id = enemyId;
-            enemyState->t = simTime;
+            enemyState->t = simTime;// prevSimTime;
             (*it2)->GetCurrentPosition(&enemyState->x, &enemyState->y);
 
             ServerInstance::Instance()->Broadcast(peers, SmartPtr<Serializable>::CastFrom(enemyState), HostInstance::Sequenced, 0);
