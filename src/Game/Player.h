@@ -54,7 +54,7 @@ protected:
     void RemoveOlderInputs(float t);
     void RemoveOlderStates(float t);
 
-    float lastPx, lastPy, lerp;
+    float offsetX, offsetY;
     float lastInputT;
 public:
     Player(Type _type, const NetData &data);

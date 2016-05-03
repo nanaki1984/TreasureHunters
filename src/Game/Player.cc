@@ -18,9 +18,8 @@ Player::Player(Type _type, const NetData &data)
 : type(_type),
   inputs(GetAllocator<MallocAllocator>(), 8),
   states(GetAllocator<MallocAllocator>(), 8),
-  lastPx(data.startX),
-  lastPy(data.startY),
-  lerp(1.0f),
+  offsetX(0.0f),
+  offsetY(0.0f),
   lastInputT(0.0f)
 {
     states.PushBack(State(.0f, data.startX, data.startY));
@@ -90,23 +89,18 @@ Player::SendPlayerState(float t, float px, float py)
     }
     else // simulated on client, lagless
     {
-        float lastTimestamp = states.Back().t;
-
-        this->RemoveOlderInputs(t);
-
         float cPx, cPy;
         this->GetPositionAtTime(t, &cPx, &cPy);
         this->RemoveOlderStates(t);
 
         if (0 == states.Count())
         {
-            Core::Log::Instance()->Write(Core::Log::Info, "Recv newer player state %f,%f @ %f (now: %f)", px, py, t, lastTimestamp);
+            //Core::Log::Instance()->Write(Core::Log::Info, "Recv newer player state %f,%f @ %f", px, py, t);
 
             states.PushBack(State(t, px, py));
 
             // no lerp, just snap
-            lastPx = px;
-            lastPy = py;
+            offsetX = offsetY = 0.0f;
         }
         else
         { // check old states for errors
@@ -114,18 +108,28 @@ Player::SendPlayerState(float t, float px, float py)
             Vector2 clientPos = Vector2(cPx, cPy);
             float sqDist = (serverPos - clientPos).GetSqrMagnitude();
 
-            //Core::Log::Instance()->Write(Core::Log::Info, "Recv player state %f,%f @ %f - sqDist: %f", px, py, t, sqDist);
+            //Core::Log::Instance()->Write(Core::Log::Info, "Recv player state %f,%f @ %f (now: %f, interp: %f,%f) - sqDist: %f", px, py, t, states.Back().t, cPx, cPy, sqDist);
 
-            if (sqDist > 0.25f)//0.0625f)//0.04f)
+            if (sqDist > 0.01f)//0.25f)//0.1089f)//0.0625f)//0.04f)
             {
-                // start lerping from last state
-                lerp = 0.0f;
+                auto &s = states.Back();
+                cPx = s.px + offsetX;
+                cPy = s.py + offsetY;
 
                 // resimulate with inputs
-                float newStateTime = states.Back().t;
+                float prevStateTime = t,//states.Front().t,
+                      newStateTime  = s.t;
+
                 states.Clear();
-                states.PushBack(State(t, px, py));
+                states.PushBack(State(prevStateTime, px, py));
+
+                lastInputT = prevStateTime;
+                this->RemoveOlderInputs(lastInputT);
                 this->Update(newStateTime);
+
+                s = states.Back();
+                offsetX = cPx - s.px;
+                offsetY = cPy - s.py;
             }
         }
     }
@@ -141,14 +145,14 @@ Player::Update(float t)
 
     float t0 = lastInputT;// newState.t;
     if (SimulatedOnServer == type)
-    {
+    {/*
         if (inputs.Count() > 0)
         {
             float oldest = inputs.Front().t;
             if (oldest < t0)
                 t0 = oldest;
-        }
-        //this->RemoveOlderInputs(t0);
+        }*/
+        this->RemoveOlderInputs(t0);
     }
     newState.t = t;
 
@@ -166,7 +170,7 @@ Player::Update(float t)
             else
                 v = Vector2::Zero;
 
-            Core::Log::Instance()->Write(Core::Log::Info, "input dt: %f", (input.t - t0));
+            //Core::Log::Instance()->Write(Core::Log::Info, "input dt: %f", (input.t - t0));
 
             newState.px += v.x * 10.0f * (input.t - t0);
             newState.py += v.y * 10.0f * (input.t - t0);
@@ -188,19 +192,8 @@ Player::Update(float t)
 
     if (SimulatedLagless == type)
     {
-        auto &s = states.Back();
-        float dt = Network::ClientInstance::kFixedStepTime;
-        lerp += dt;
-        if (lerp >= 1.0f)
-        {
-            lastPx = s.px;
-            lastPy = s.py;
-        }
-        else
-        {
-            lastPx += (s.px - lastPx) * std::min(1.0f, dt * 12.0f);
-            lastPy += (s.py - lastPy) * std::min(1.0f, dt * 12.0f);
-        }
+        offsetX *= (1.0f - (Network::ClientInstance::kFixedStepTime * 10.0f));//6.0f));
+        offsetY *= (1.0f - (Network::ClientInstance::kFixedStepTime * 10.0f));//6.0f));
     }
 }
 
@@ -210,8 +203,8 @@ Player::GetCurrentPosition(float *x, float *y)
     auto &s = states.Back();
     if (SimulatedLagless == type)
     {
-        *x = lastPx;
-        *y = lastPy;
+        *x = s.px + offsetX;
+        *y = s.py + offsetY;
     }
     else
     {
