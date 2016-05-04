@@ -45,27 +45,6 @@ ClientInstance::Tick()
 {
     timeServer->Tick();
 
-    // update player
-    if (Playing == state && !timeServer->IsPaused())
-    {
-        float newTimestamp = Core::Time::TimeServer::Instance()->GetRealTime();// GetTime();
-        float dt = newTimestamp - lastTimestamp;
-        if (dt > .0f)
-        {
-            lastTimestamp = newTimestamp;
-
-            accumulator += dt;
-            while (accumulator >= kFixedStepTime)
-            {
-                simTime += kFixedStepTime;
-
-                level->Update(simTime);
-
-                accumulator -= kFixedStepTime;
-            }
-        }
-    }
-
     ENetEvent event;
     while (enet_host_service(host, &event, 0) > 0)
     {
@@ -195,6 +174,29 @@ ClientInstance::Tick()
             break;
         }
     }
+
+    // update player
+    if (Playing == state && !timeServer->IsPaused())
+    {
+        float newTimestamp = Core::Time::TimeServer::Instance()->GetRealTime();// GetTime();
+        float dt = newTimestamp - lastTimestamp;
+        if (dt > .0f)
+        {
+            lastTimestamp = newTimestamp;
+
+            accumulator += dt;
+            while (accumulator >= kFixedStepTime)
+            {
+                simTime += kFixedStepTime;
+
+                level->Update(simTime);
+
+                accumulator -= kFixedStepTime;
+            }
+        }
+    }
+
+    enet_host_flush(host);
 
     auto it = managers.Begin(), end = managers.End();
     for (; it != end; ++it)
@@ -347,7 +349,7 @@ void
 ClientInstance::GetEnemyPosition(uint8_t enemyId, float *x, float *y)
 {
     if (level.IsValid())
-        level->GetEnemy(enemyId)->GetPositionAtTime(simTime - 0.1f, x, y);
+        level->GetEnemy(enemyId)->GetPositionAtTime(simTime - 0.2f, x, y);
 }
 
 }; // namespace Network

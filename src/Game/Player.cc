@@ -16,8 +16,8 @@ DefineClassInfo(Game::Player, Core::RefCounted);
 
 Player::Player(Type _type, const NetData &data)
 : type(_type),
-  inputs(GetAllocator<MallocAllocator>(), 8),
-  states(GetAllocator<MallocAllocator>(), 8),
+  inputs(GetAllocator<MallocAllocator>(), 16),
+  states(GetAllocator<MallocAllocator>(), 16),
   offsetX(0.0f),
   offsetY(0.0f)
 {
@@ -109,7 +109,7 @@ Player::SendPlayerState(float t, float px, float py)
 
             //Core::Log::Instance()->Write(Core::Log::Info, "Recv player state %f,%f @ %f (now: %f, interp: %f,%f) - sqDist: %f", px, py, t, states.Back().t, cPx, cPy, sqDist);
 
-            if (sqDist > 0.01f)//0.25f)//0.1089f)//0.0625f)//0.04f)
+            if (sqDist > 0.1089f)//0.01f)//0.25f)//0.0625f)//0.04f)
             {
                 auto &s = states.Back();
                 cPx = s.px + offsetX;
@@ -123,6 +123,9 @@ Player::SendPlayerState(float t, float px, float py)
                 states.PushBack(State(prevStateTime, px, py));
 
                 type = SimulatedOnServer;
+                this->RemoveOlderInputs(prevStateTime);
+                if (inputs.Count() > 0)
+                    inputs.Front().t = prevStateTime;
                 this->Update(newStateTime);
                 type = SimulatedLagless;
 
@@ -144,55 +147,82 @@ Player::Update(float t)
 
     float prevStateT = newState.t;
     if (SimulatedOnServer == type)
-        this->RemoveOlderInputs(prevStateT);
+    {
+        //this->RemoveOlderInputs(prevStateT);
+        float oldestInputT = inputs.Front().t;
+        if (oldestInputT < prevStateT)
+        {
+            prevStateT = oldestInputT;
+            this->GetPositionAtTime(prevStateT, &newState.px, &newState.py);
+        }
+    }
     newState.t = t;
 
     // process new inputs
     Input input;
     if (SimulatedLagless == type)
     {
-        input = inputs.Back();
+        uint32_t i = 1, c = inputs.Count();
+        if (c > 0)
+        {
+            for (; i < c; ++i)
+            {
+                if (inputs[i].t > t)
+                    break;
+            }
+            input = inputs[i - 1];
 
-        Vector2 v(input.x, input.y);
-        float vv = v.GetSqrMagnitude();
-        if (vv > 0.02f)
-            v /= sqrtf(vv);
-        else
-            v = Vector2::Zero;
+            Vector2 v(input.x, input.y);
+            float vMag = std::min(1.0f, v.Normalize());
+            if (vMag > 0.02f)
+                v *= vMag * vMag;
+            else
+                v = Vector2::Zero;
 
-        newState.px += v.x * 10.0f * (t - std::max(prevStateT, input.t));
-        newState.py += v.y * 10.0f * (t - std::max(prevStateT, input.t));
+            float dt = (t - std::max(prevStateT, input.t));
+            if (dt > .0f)
+            {
+                //Core::Log::Instance()->Write(Core::Log::Info, "input dt: %f", dt);
+                newState.px += v.x * 10.0f * dt;
+                newState.py += v.y * 10.0f * dt;
+            }
+        }
     }
     else
     {
         float t0, t1 = .0f;
         bool stop = false;
+        //Core::Log::Instance()->Write(Core::Log::Info, "inputs count: %d", inputs.Count());
         do
         {
             input = inputs.Front();
 
-            t0 = std::max(prevStateT, input.t);
-            t0 = std::max(t1, t0);
+            t0 = std::max(t1, input.t);
             t1 = t;
 
             stop = true;
             if (inputs.Count() > 1)
             {
                 inputs.PopFront();
-                t1 = inputs.Front().t;
-                stop = false;
+                if (inputs.Front().t < t1)
+                {
+                    t1 = inputs.Front().t;
+                    stop = false;
+                }
             }
 
             // process input
             Vector2 v(input.x, input.y);
-            float vv = v.GetSqrMagnitude();
-            if (vv > 0.02f)
-                v /= sqrtf(vv);
+            float vMag = std::min(1.0f, v.Normalize());
+            if (vMag > 0.02f)
+                v *= vMag * vMag;
             else
                 v = Vector2::Zero;
 
-            newState.px += v.x * 10.0f * (t1 - t0);
-            newState.py += v.y * 10.0f * (t1 - t0);
+            float dt = (t1 - t0);
+            //Core::Log::Instance()->Write(Core::Log::Info, "server input dt: %f, stop: %d", dt, stop ? 1 : 0);
+            newState.px += v.x * 10.0f * dt;
+            newState.py += v.y * 10.0f * dt;
         } while (!stop);
     }
 
@@ -203,8 +233,8 @@ Player::Update(float t)
 
     if (SimulatedLagless == type)
     {
-        offsetX *= (1.0f - (Network::ClientInstance::kFixedStepTime * 10.0f));//6.0f));
-        offsetY *= (1.0f - (Network::ClientInstance::kFixedStepTime * 10.0f));//6.0f));
+        offsetX *= (1.0f - (Network::ClientInstance::kFixedStepTime * 2.0f));// 4.0f);// 12.0f));
+        offsetY *= (1.0f - (Network::ClientInstance::kFixedStepTime * 2.0f));// 4.0f);// 12.0f));
     }
 }
 

@@ -36,16 +36,6 @@ ServerInstance::Tick()
 {
     timeServer->Tick();
 
-    // update rooms
-    Array<Handle<GameRoom>> roomsToDelete(GetAllocator<ScratchAllocator>());
-    for (auto roomIt = rooms.Begin(), roomsEnd = rooms.End(); roomIt < roomsEnd; ++roomIt)
-    {
-        if (roomIt->Update())
-            roomsToDelete.PushBack(roomIt);
-    }
-    for (auto delIt = roomsToDelete.Begin(), delEnd = roomsToDelete.End(); delIt < delEnd; ++delIt)
-        rooms.DeleteInstance(*delIt);
-
     ENetEvent event;
     while (enet_host_service(host, &event, 0) > 0)
     {
@@ -131,6 +121,18 @@ ServerInstance::Tick()
             break;
         }
     }
+
+    // update rooms
+    Array<Handle<GameRoom>> roomsToDelete(GetAllocator<ScratchAllocator>());
+    for (auto roomIt = rooms.Begin(), roomsEnd = rooms.End(); roomIt < roomsEnd; ++roomIt)
+    {
+        if (roomIt->Update())
+            roomsToDelete.PushBack(roomIt);
+    }
+    for (auto delIt = roomsToDelete.Begin(), delEnd = roomsToDelete.End(); delIt < delEnd; ++delIt)
+        rooms.DeleteInstance(*delIt);
+
+    enet_host_flush(host);
 
     auto it = managers.Begin(), end = managers.End();
     for (; it != end; ++it)

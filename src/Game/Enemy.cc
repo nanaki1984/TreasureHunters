@@ -16,7 +16,7 @@ DefineClassInfo(Game::Enemy, Core::RefCounted);
 
 Enemy::Enemy(Type _type, const NetData &data)
 : type(_type),
-  states(GetAllocator<MallocAllocator>(), 8),
+  states(GetAllocator<MallocAllocator>(), 16),
   waypoints(GetAllocator<MallocAllocator>(), 3),
   waypointIndex(0)
 {

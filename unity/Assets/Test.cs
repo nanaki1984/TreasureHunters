@@ -70,7 +70,7 @@ public class Test : MonoBehaviour {
         Debug.Log("GameInit said " + success);
 	}
 
-	void Update()
+    void Update()
     {
         bool isPlaying = false;
         int gameState = GameGetState();
@@ -122,7 +122,10 @@ public class Test : MonoBehaviour {
 
             float x, y;
             GameReceivePosition(out x, out y);
+            //var prevPos = cube.position;
             cube.position = new Vector3(x, .0f, y);
+            //var vel = (cube.position - prevPos) / Time.deltaTime;
+            //Debug.Log("Vel " + vel.magnitude);
 
             GameReceiveEnemyPosition(out x, out y);
             enemy.position = new Vector3(x, .0f, y);
