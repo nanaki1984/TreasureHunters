@@ -55,7 +55,6 @@ protected:
     void RemoveOlderStates(float t);
 
     float offsetX, offsetY;
-    float lastInputT;
 public:
     Player(Type _type, const NetData &data);
     Player(const Player &other) = delete;

@@ -19,8 +19,7 @@ Player::Player(Type _type, const NetData &data)
   inputs(GetAllocator<MallocAllocator>(), 8),
   states(GetAllocator<MallocAllocator>(), 8),
   offsetX(0.0f),
-  offsetY(0.0f),
-  lastInputT(0.0f)
+  offsetY(0.0f)
 {
     states.PushBack(State(.0f, data.startX, data.startY));
 }
@@ -37,7 +36,7 @@ Player::GetLastTimestamp() const
 void
 Player::RemoveOlderInputs(float t)
 {
-    while (inputs.Count() > 0)
+    while (inputs.Count() > 1)
     {
         Input input = inputs.Front();
         if (input.t < t)
@@ -123,9 +122,9 @@ Player::SendPlayerState(float t, float px, float py)
                 states.Clear();
                 states.PushBack(State(prevStateTime, px, py));
 
-                lastInputT = prevStateTime;
-                this->RemoveOlderInputs(lastInputT);
+                type = SimulatedOnServer;
                 this->Update(newStateTime);
+                type = SimulatedLagless;
 
                 s = states.Back();
                 offsetX = cPx - s.px;
@@ -143,25 +142,47 @@ Player::Update(float t)
 
     State newState = states.Back();
 
-    float t0 = lastInputT;// newState.t;
+    float prevStateT = newState.t;
     if (SimulatedOnServer == type)
-    {/*
-        if (inputs.Count() > 0)
-        {
-            float oldest = inputs.Front().t;
-            if (oldest < t0)
-                t0 = oldest;
-        }*/
-        this->RemoveOlderInputs(t0);
-    }
+        this->RemoveOlderInputs(prevStateT);
     newState.t = t;
 
     // process new inputs
-    while (inputs.Count() > 0)
+    Input input;
+    if (SimulatedLagless == type)
     {
-        Input input = inputs.Front();
-        if (input.t <= t)
+        input = inputs.Back();
+
+        Vector2 v(input.x, input.y);
+        float vv = v.GetSqrMagnitude();
+        if (vv > 0.02f)
+            v /= sqrtf(vv);
+        else
+            v = Vector2::Zero;
+
+        newState.px += v.x * 10.0f * (t - std::max(prevStateT, input.t));
+        newState.py += v.y * 10.0f * (t - std::max(prevStateT, input.t));
+    }
+    else
+    {
+        float t0, t1 = .0f;
+        bool stop = false;
+        do
         {
+            input = inputs.Front();
+
+            t0 = std::max(prevStateT, input.t);
+            t0 = std::max(t1, t0);
+            t1 = t;
+
+            stop = true;
+            if (inputs.Count() > 1)
+            {
+                inputs.PopFront();
+                t1 = inputs.Front().t;
+                stop = false;
+            }
+
             // process input
             Vector2 v(input.x, input.y);
             float vv = v.GetSqrMagnitude();
@@ -170,20 +191,10 @@ Player::Update(float t)
             else
                 v = Vector2::Zero;
 
-            //Core::Log::Instance()->Write(Core::Log::Info, "input dt: %f", (input.t - t0));
-
-            newState.px += v.x * 10.0f * (input.t - t0);
-            newState.py += v.y * 10.0f * (input.t - t0);
-
-            t0 = input.t;
-
-            inputs.PopFront();
-        }
-        else
-            break;
+            newState.px += v.x * 10.0f * (t1 - t0);
+            newState.py += v.y * 10.0f * (t1 - t0);
+        } while (!stop);
     }
-
-    lastInputT = t0;
 
     if (states.Capacity() == states.Count())
         states.PopFront();
