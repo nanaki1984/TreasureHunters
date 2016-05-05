@@ -44,7 +44,7 @@ public class Test : MonoBehaviour {
     [DllImport("THShared")]
     public static extern void GameQuit();
 
-    public Transform cube;
+    public Player player;
     public Transform enemy;
     protected bool paused = false;
 
@@ -122,10 +122,8 @@ public class Test : MonoBehaviour {
 
             float x, y;
             GameReceivePosition(out x, out y);
-            //var prevPos = cube.position;
-            cube.position = new Vector3(x, .0f, y);
-            //var vel = (cube.position - prevPos) / Time.deltaTime;
-            //Debug.Log("Vel " + vel.magnitude);
+            //cube.position = new Vector3(x, .0f, y);
+            player.SetPosition(x, y);
 
             GameReceiveEnemyPosition(out x, out y);
             enemy.position = new Vector3(x, .0f, y);

@@ -109,7 +109,7 @@ Player::SendPlayerState(float t, float px, float py)
 
             //Core::Log::Instance()->Write(Core::Log::Info, "Recv player state %f,%f @ %f (now: %f, interp: %f,%f) - sqDist: %f", px, py, t, states.Back().t, cPx, cPy, sqDist);
 
-            if (sqDist > 0.1089f)//0.01f)//0.25f)//0.0625f)//0.04f)
+            if (sqDist > 0.01f)//0.1089f)//0.25f)//0.0625f)//0.04f)//0.0025f)
             {
                 auto &s = states.Back();
                 cPx = s.px + offsetX;
@@ -154,9 +154,9 @@ Player::Update(float t)
         {
             prevStateT = oldestInputT;
             this->GetPositionAtTime(prevStateT, &newState.px, &newState.py);
+            newState.t = prevStateT;
         }
     }
-    newState.t = t;
 
     // process new inputs
     Input input;
@@ -182,11 +182,12 @@ Player::Update(float t)
             float dt = (t - std::max(prevStateT, input.t));
             if (dt > .0f)
             {
-                //Core::Log::Instance()->Write(Core::Log::Info, "input dt: %f", dt);
+                Core::Log::Instance()->Write(Core::Log::Info, "input dt: %f", dt);
                 newState.px += v.x * 10.0f * dt;
                 newState.py += v.y * 10.0f * dt;
             }
         }
+        newState.t = t;
     }
     else
     {
@@ -219,10 +220,14 @@ Player::Update(float t)
             else
                 v = Vector2::Zero;
 
-            float dt = (t1 - t0);
-            //Core::Log::Instance()->Write(Core::Log::Info, "server input dt: %f, stop: %d", dt, stop ? 1 : 0);
+            float dt = t1 - t0;
+            Core::Log::Instance()->Write(Core::Log::Info, "server input dt: %f, stop: %d", dt, stop ? 1 : 0);
+
+            dt = std::min(Network::ClientInstance::kFixedStepTime * 2.0f, dt); // keep input for 2frames MAX
+
             newState.px += v.x * 10.0f * dt;
             newState.py += v.y * 10.0f * dt;
+            newState.t += dt;
         } while (!stop);
     }
 
