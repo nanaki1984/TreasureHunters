@@ -11,12 +11,13 @@ class PlayerInputs : public Network::Serializable {
 protected:
     template <typename Stream> void SerializeImpl(Stream &stream)
     {
-        stream.Serialize(t);
+        stream.Serialize(step);
         stream.Serialize(x);
         stream.Serialize(y);
     }
 public:
-    float t, x, y;
+    uint32_t step;
+    float x, y;
 
     PlayerInputs();
     PlayerInputs(const PlayerInputs &other) = delete;

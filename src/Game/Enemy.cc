@@ -16,7 +16,7 @@ DefineClassInfo(Game::Enemy, Core::RefCounted);
 
 Enemy::Enemy(Type _type, const NetData &data)
 : type(_type),
-  states(GetAllocator<MallocAllocator>(), 16),
+  states(GetAllocator<MallocAllocator>(), 32),
   waypoints(GetAllocator<MallocAllocator>(), 3),
   waypointIndex(0)
 {
@@ -30,36 +30,13 @@ Enemy::Enemy(Type _type, const NetData &data)
 Enemy::~Enemy()
 { }
 
-float
-Enemy::GetLastTimestamp() const
-{
-    return states.Back().t;
-}
-
 void
-Enemy::SendEnemyState(float t, float px, float py)
+Enemy::Step(State &state)
 {
-    assert(type != SimulatedOnServer);
-
-    if (states.Capacity() == states.Count())
-        states.PopFront();
-
-    states.PushBack(State(t, px, py));
-}
-
-void
-Enemy::Update(float t)
-{
-    if (Cloned == type)
-        return;
-
-    State newState = states.Back();
-    float t0 = newState.t;
-    newState.t = t;
-
-    Vector2 newPos(newState.px, newState.py);
+    Vector2 newPos(state.px, state.py);
     Vector2 currWaypoint = waypoints[waypointIndex];
     Vector2 toWaypoint = currWaypoint - newPos;
+
     float sqDist = toWaypoint.GetSqrMagnitude();
     if (sqDist <= 1.0f)
     {
@@ -69,16 +46,54 @@ Enemy::Update(float t)
         toWaypoint = currWaypoint - newPos;
         sqDist = toWaypoint.GetSqrMagnitude();
     }
-    toWaypoint /= sqrtf(sqDist);
-    newPos += (toWaypoint * 7.5f * (t - t0));
 
-    newState.px = newPos.x;
-    newState.py = newPos.y;
+    toWaypoint /= sqrtf(sqDist);
+    newPos += (toWaypoint * 7.5f * Network::HostInstance::kFixedTimeStep);
+
+    state.px = newPos.x;
+    state.py = newPos.y;
+
+    ++state.step;
+}
+
+void
+Enemy::SendEnemyState(uint32_t step, float px, float py)
+{
+    assert(type != SimulatedOnServer);
+
+    int i = 0, c = states.Count();
+    for (; i < c; ++i)
+    {
+        if (states[i].step < step)
+            break;
+    }
+
+    if (c == states.Capacity())
+    {
+        if (i == c)
+            return;
+        else
+            states.PopBack();
+    }
+
+    states.Insert(i, State(step, px, py));
+}
+
+void
+Enemy::Update(uint32_t step)
+{
+    if (Cloned == type)
+        return;
+
+    State newState = states[0];
+
+    while (newState.step < step)
+        this->Step(newState);
 
     if (states.Capacity() == states.Count())
-        states.PopFront();
+        states.PopBack();
 
-    states.PushBack(newState);
+    states.Insert(0, newState);
 }
 
 void
@@ -92,21 +107,38 @@ Enemy::GetCurrentPosition(float *x, float *y)
 void
 Enemy::GetPositionAtTime(float t, float *x, float *y)
 {
-    int i = 0, count = states.Count() - 1;
-    for (; i < count; ++i)
+    int last = states.Count() - 1, i = last;
+
+    uint32_t s = floorf(t / Network::HostInstance::kFixedTimeStep);
+
+    while (i >= 0 && states[i].step < s)
+        --i;
+
+    if (-1 == i)
+    { // too new
+        *x = states[0].px;
+        *y = states[0].py;
+    }
+    else
     {
-        auto &s0 = states[i],
-             &s1 = states[i + 1];
-        if (s0.t <= t && s1.t > t)
+        if (i == last)
+        { // too old
+            *x = states[i].px;
+            *y = states[i].py;
+        }
+        else
         {
-            float s = (t - s0.t) / (s1.t - s0.t);
-            *x = Math::Lerp(s0.px, s1.px, s);
-            *y = Math::Lerp(s0.py, s1.py, s);
-            return;
+            auto &s0 = states[i + 1],
+                 &s1 = states[i];
+
+            float t0 = s0.step * Network::HostInstance::kFixedTimeStep,
+                  t1 = s1.step * Network::HostInstance::kFixedTimeStep,
+                  u  = (t - t0) / (t1 - t0);
+
+            *x = Math::Lerp(s0.px, s1.px, u);
+            *y = Math::Lerp(s0.py, s1.py, u);
         }
     }
-    *x = states.Back().px;
-    *y = states.Back().py;
 }
 
 } // namespace Game

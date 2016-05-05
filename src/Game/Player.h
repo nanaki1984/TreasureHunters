@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Core/RefCounted.h"
-#include "Core/Collections/Queue_type.h"
+#include "Core/Collections/Array_type.h"
 
 namespace Game {
 
-using Core::Collections::Queue;
+using Core::Collections::Array;
 
 class Player : public Core::RefCounted {
     DeclareClassInfo;
@@ -19,25 +19,27 @@ public:
 
     struct Input
     {
-        float t, x, y;
+        uint32_t step;
+        float x, y;
 
         Input()
         { }
 
-        Input(float _t, float _x, float _y)
-        : t(_t), x(_x), y(_y)
+        Input(uint32_t _step, float _x, float _y)
+        : step(_step), x(_x), y(_y)
         { }
     };
 
     struct State
     {
-        float t, px, py;
+        uint32_t step;
+        float px, py;
 
         State()
         { }
 
-        State(float _t, float _px, float _py)
-        : t(_t), px(_px), py(_py)
+        State(uint32_t _step, float _px, float _py)
+        : step(_step), px(_px), py(_py)
         { }
     };
 
@@ -48,13 +50,14 @@ public:
     };
 protected:
     Type type;
-    Queue<Input> inputs;
-    Queue<State> states;
+    Array<Input> inputs;
+    Array<State> states;
 
-    void RemoveOlderInputs(float t);
-    void RemoveOlderStates(float t);
+    void RemoveOlderInputs(uint32_t step);
+    void Step(State &state, const Input &input);
 
     float offsetX, offsetY;
+    bool hasChanged;
 public:
     Player(Type _type, const NetData &data);
     Player(const Player &other) = delete;
@@ -62,22 +65,29 @@ public:
 
     Player& operator =(const Player &other) = delete;
 
-    void SendInput(float t, float x, float y);
-    void SendPlayerState(float t, float px, float py);
+    void SendPlayerInput(uint32_t step, float x, float y);
+    void SendPlayerState(uint32_t step, float px, float py);
 
-    void Update(float t);
+    void Update(uint32_t step);
 
     Type GetType() const;
-    float GetLastTimestamp() const;
+    bool HasChanged() const;
 
-    void GetCurrentPosition(float *x, float *y);
-    void GetPositionAtTime(float t, float *x, float *y);
+    uint32_t GetCurrentStep() const;
+    void GetCurrentPosition(float *x, float *y) const;
+    void GetPositionAtTime(float t, float *x, float *y) const;
 };
 
 inline Player::Type
 Player::GetType() const
 {
     return type;
+}
+
+inline bool
+Player::HasChanged() const
+{
+    return hasChanged;
 }
 
 } // namespace Game

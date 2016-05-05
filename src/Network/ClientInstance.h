@@ -50,11 +50,10 @@ protected:
     uint8_t playerId;
     float lastTimestamp;
     float accumulator, simTime;
+    uint32_t simStep;
     SmartPtr<GameRoomData> joinedRoomData;
     SmartPtr<Game::Level> level;
 public:
-    static const float kFixedStepTime;
-
     ClientInstance();
     virtual ~ClientInstance();
 

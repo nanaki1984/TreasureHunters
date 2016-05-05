@@ -12,13 +12,14 @@ protected:
     template <typename Stream> void SerializeImpl(Stream &stream)
     {
         stream.Serialize(id);
-        stream.Serialize(t);
+        stream.Serialize(step);
         stream.Serialize(x);
         stream.Serialize(y);
     }
 public:
     uint8_t id;
-    float t, x, y;
+    uint32_t step;
+    float x, y;
 
     PlayerState();
     PlayerState(const PlayerState &other) = delete;

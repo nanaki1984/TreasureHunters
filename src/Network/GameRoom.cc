@@ -22,6 +22,7 @@ GameRoom::GameRoom(uint8_t playersCount)
   startGameMsgs(GetAllocator<MallocAllocator>(), playersCount),
   lastTimestamp(.0f),
   accumulator(.0f), simTime(.0f),
+  simStep(0),
   data(SmartPtr<GameRoomData>::MakeNew<MallocAllocator>())
 {
     data->playersData.Resize(playersCount);
@@ -102,6 +103,7 @@ GameRoom::PlayerReady(ENetPeer *peer, const SmartPtr<Messages::StartGame> &start
                 startGameMsgs.Trim();
 
                 accumulator = simTime = .0f;
+                simStep = 0;
                 lastTimestamp = goTime;
 
                 level = SmartPtr<Game::Level>::MakeNew<BlocksAllocator>();
@@ -154,7 +156,7 @@ GameRoom::RecvPlayerInputs(ENetPeer *peer, const SmartPtr<Messages::PlayerInputs
 {
     int32_t playerId = peers.IndexOf(peer);
     if (playerId > -1)
-        level->GetPlayer(playerId)->SendInput(playerInputs->t, playerInputs->x, playerInputs->y);
+        level->GetPlayer(playerId)->SendPlayerInput(playerInputs->step, playerInputs->x, playerInputs->y);
 }
 
 bool
@@ -175,23 +177,27 @@ GameRoom::Update()
     lastTimestamp = newTimestamp;
 
     accumulator += dt;
-    while (accumulator >= kFixedStepTime)
+    simTime += dt;
+    while (accumulator >= kServerFixedTime)
     {
-        //float prevSimTime = simTime;
-        simTime += kFixedStepTime;
+        //simTime += kServerFixedTime;
 
-        level->Update(simTime);
+        simStep += kStepsCount;
+        level->Update(simStep);
 
         auto it = level->PlayersBegin(), end = level->PlayersEnd();
         uint8_t playerId = 0;
         for (; it != end; ++it, ++playerId)
         {
+            if (!(*it)->HasChanged())
+                continue;
+
             auto playerState = SmartPtr<Messages::PlayerState>::MakeNew<ScratchAllocator>();
             playerState->id = playerId;
-            playerState->t = simTime;// prevSimTime;
+            playerState->step = (*it)->GetCurrentStep();
             (*it)->GetCurrentPosition(&playerState->x, &playerState->y);
 
-            ServerInstance::Instance()->Broadcast(peers, SmartPtr<Serializable>::CastFrom(playerState), HostInstance::Sequenced, 0);
+            ServerInstance::Instance()->Broadcast(peers, SmartPtr<Serializable>::CastFrom(playerState), HostInstance::Unsequenced, 0);
         }
 
         auto it2 = level->EnemiesBegin(), end2 = level->EnemiesEnd();
@@ -200,13 +206,13 @@ GameRoom::Update()
         {
             auto enemyState = SmartPtr<Messages::EnemyState>::MakeNew<ScratchAllocator>();
             enemyState->id = enemyId;
-            enemyState->t = simTime;// prevSimTime;
+            enemyState->step = simStep;
             (*it2)->GetCurrentPosition(&enemyState->x, &enemyState->y);
 
-            ServerInstance::Instance()->Broadcast(peers, SmartPtr<Serializable>::CastFrom(enemyState), HostInstance::Sequenced, 0);
+            ServerInstance::Instance()->Broadcast(peers, SmartPtr<Serializable>::CastFrom(enemyState), HostInstance::Unsequenced, 0);
         }
 
-        accumulator -= kFixedStepTime;
+        accumulator -= kServerFixedTime;
     }
 
     return false;

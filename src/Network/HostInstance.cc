@@ -12,6 +12,8 @@ namespace Network {
 
 HostInstance *HostInstance::instance = nullptr;
 
+const float HostInstance::kFixedTimeStep = 0.016f;
+
 enet_uint32
 HostInstance::MessageTypeToFlags(MessageType messageType)
 {

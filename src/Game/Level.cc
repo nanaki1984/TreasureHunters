@@ -63,15 +63,15 @@ Level::DeletePlayer(uint8_t playerId)
 }
 
 void
-Level::Update(float simTime)
+Level::Update(uint32_t simStep)
 {
     auto plyIt = players.Begin(), plyEnd = players.End();
     for (; plyIt != plyEnd; ++plyIt)
-        (*plyIt)->Update(simTime);
+        (*plyIt)->Update(simStep);
 
     auto enmIt = enemies.Begin(), enmEnd = enemies.End();
     for (; enmIt != enmEnd; ++enmIt)
-        (*enmIt)->Update(simTime);
+        (*enmIt)->Update(simStep);
 }
 
 } // namespace Game

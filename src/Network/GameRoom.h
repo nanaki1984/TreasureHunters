@@ -9,6 +9,7 @@
 #include "Network/Messages/StartGame.h"
 #include "Network/Messages/PlayerInputs.h"
 #include "Game/Level.h"
+#include "Network/HostInstance.h"
 #include "Network/GameRoomData.h"
 
 namespace Network {
@@ -33,11 +34,13 @@ protected:
 
     float lastTimestamp;
     float accumulator, simTime;
+    uint32_t simStep;
 
     SmartPtr<GameRoomData> data;
     SmartPtr<Game::Level> level;
 public:
-    const float kFixedStepTime = 0.05f;
+    const int kStepsCount = 3;
+    const float kServerFixedTime = (float)kStepsCount * HostInstance::kFixedTimeStep;
 
     GameRoom(uint8_t playersCount);
     virtual ~GameRoom();

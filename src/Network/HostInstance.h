@@ -37,6 +37,8 @@ protected:
     bool Connect(const char *serverHost, int serverPort);
     void Stop();
 public:
+    static const float kFixedTimeStep;
+
     HostInstance();
     virtual ~HostInstance();
 

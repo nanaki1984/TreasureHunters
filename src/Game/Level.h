@@ -24,7 +24,7 @@ public:
     void Init(const SmartPtr<Network::GameRoomData> &roomData);
     void Init(const SmartPtr<Network::GameRoomData> &roomData, uint8_t clientPlayerId);
     void DeletePlayer(uint8_t playerId);
-    void Update(float simTime);
+    void Update(uint32_t simStep);
 
     const SmartPtr<Player>& GetPlayer(uint8_t playerId) const;
     const SmartPtr<Player>* PlayersBegin() const;

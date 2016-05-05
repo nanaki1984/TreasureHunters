@@ -18,8 +18,6 @@ using namespace Managers;
 
 namespace Network {
 
-const float ClientInstance::kFixedStepTime = 0.016f;
-
 ClientInstance::ClientInstance()
 : HostInstance(),
   server(nullptr),
@@ -132,13 +130,14 @@ ClientInstance::Tick()
                             playerId = startGame->playerId;
                             accumulator = simTime = .0f;
                             lastTimestamp = startGame->goTime;
+                            simStep = 0;
 
                             level = SmartPtr<Game::Level>::MakeNew<BlocksAllocator>();
                             level->Init(joinedRoomData, playerId);
                             joinedRoomData.Reset();
 
                             state = Playing;
-                            log->Write(Log::Info, "Starting game for player at time %f (now: %f).", lastTimestamp, Core::Time::TimeServer::Instance()->GetRealTime());// GetTime());
+                            log->Write(Log::Info, "Starting game for player at time %f (now: %f).", lastTimestamp, Core::Time::TimeServer::Instance()->GetRealTime());
                         }
                     }
 
@@ -153,10 +152,7 @@ ClientInstance::Tick()
                         auto playerState = SmartPtr<Messages::PlayerState>::CastFrom(ptr);
 
                         auto player = level->GetPlayer(playerState->id);
-                        player->SendPlayerState(playerState->t, playerState->x, playerState->y);
-                        /*
-                        if (playerState->id == playerId && simTime < player->GetLastTimestamp()) // !!!! VERY IMPORTANT, needed for the client to sync with server
-                            simTime += ceilf((player->GetLastTimestamp() - simTime) / kFixedStepTime) * kFixedStepTime;*/
+                        player->SendPlayerState(playerState->step, playerState->x, playerState->y);
                     }
                 }
                 else if (ptr->IsInstanceOf<Messages::EnemyState>())
@@ -166,7 +162,7 @@ ClientInstance::Tick()
                         auto enemyState = SmartPtr<Messages::EnemyState>::CastFrom(ptr);
 
                         auto enemy = level->GetEnemy(enemyState->id);
-                        enemy->SendEnemyState(enemyState->t, enemyState->x, enemyState->y);
+                        enemy->SendEnemyState(enemyState->step, enemyState->x, enemyState->y);
                     }
                 }
             }
@@ -178,20 +174,21 @@ ClientInstance::Tick()
     // update player
     if (Playing == state && !timeServer->IsPaused())
     {
-        float newTimestamp = Core::Time::TimeServer::Instance()->GetRealTime();// GetTime();
+        float newTimestamp = Core::Time::TimeServer::Instance()->GetRealTime();
         float dt = newTimestamp - lastTimestamp;
         if (dt > .0f)
         {
             lastTimestamp = newTimestamp;
+            simTime += dt;
 
             accumulator += dt;
-            while (accumulator >= kFixedStepTime)
+            while (accumulator >= kFixedTimeStep)
             {
-                simTime += kFixedStepTime;
+                //simTime += kFixedTimeStep;
 
-                level->Update(simTime);
+                level->Update(++simStep);
 
-                accumulator -= kFixedStepTime;
+                accumulator -= kFixedTimeStep;
             }
         }
     }
@@ -328,14 +325,14 @@ ClientInstance::Send(const SmartPtr<Serializable> &object, MessageType messageTy
 void
 ClientInstance::SendPlayerInputs(float x, float y)
 {
-    level->GetPlayer(playerId)->SendInput(simTime/* + kFixedStepTime*/, x, y);
+    level->GetPlayer(playerId)->SendPlayerInput(simStep, x, y);
 
     auto playerInputs = SmartPtr<Messages::PlayerInputs>::MakeNew<ScratchAllocator>();
-    playerInputs->t = simTime;// + kFixedStepTime;
+    playerInputs->step = simStep;
     playerInputs->x = x;
     playerInputs->y = y;
 
-    this->Send(SmartPtr<Serializable>::CastFrom(playerInputs), Sequenced, 0);
+    this->Send(SmartPtr<Serializable>::CastFrom(playerInputs), Unsequenced, 0);
 }
 
 void
