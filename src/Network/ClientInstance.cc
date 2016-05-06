@@ -179,12 +179,12 @@ ClientInstance::Tick()
         if (dt > .0f)
         {
             lastTimestamp = newTimestamp;
-            simTime += dt;
+            //simTime += dt;
 
             accumulator += dt;
             while (accumulator >= kFixedTimeStep)
             {
-                //simTime += kFixedTimeStep;
+                simTime += kFixedTimeStep;
 
                 level->Update(++simStep);
 

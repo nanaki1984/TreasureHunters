@@ -2,6 +2,7 @@
 #include "Core/Collections/Array.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MallocAllocator.h"
+#include "Core/Memory/BlocksAllocator.h"
 #include "Math/Vector2.h"
 #include "Math/Math.h"
 #include "Core/Log.h"
@@ -16,8 +17,8 @@ DefineClassInfo(Game::Player, Core::RefCounted);
 
 Player::Player(Type _type, const NetData &data)
 : type(_type),
-  inputs(GetAllocator<MallocAllocator>(), 32),
-  states(GetAllocator<MallocAllocator>(), 32),
+  inputs(GetAllocator<BlocksAllocator>(), 32),
+  states(GetAllocator<BlocksAllocator>(), 32),
   offsetX(0.0f),
   offsetY(0.0f),
   hasChanged(false)

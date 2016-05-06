@@ -3,6 +3,7 @@
 #include "Core/Collections/Queue.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MallocAllocator.h"
+#include "Core/Memory/BlocksAllocator.h"
 #include "Math/Math.h"
 #include "Core/Log.h"
 #include "Network/ClientInstance.h"
@@ -16,7 +17,7 @@ DefineClassInfo(Game::Enemy, Core::RefCounted);
 
 Enemy::Enemy(Type _type, const NetData &data)
 : type(_type),
-  states(GetAllocator<MallocAllocator>(), 32),
+  states(GetAllocator<BlocksAllocator>(), _type == SimulatedOnServer ? 32 : 10),
   waypoints(GetAllocator<MallocAllocator>(), 3),
   waypointIndex(0)
 {
@@ -88,18 +89,20 @@ Enemy::Update(uint32_t step)
     State newState = states[0];
 
     while (newState.step < step)
+    {
         this->Step(newState);
 
-    if (states.Capacity() == states.Count())
-        states.PopBack();
+        if (states.Capacity() == states.Count())
+            states.PopBack();
 
-    states.Insert(0, newState);
+        states.Insert(0, newState);
+    }
 }
 
 void
 Enemy::GetCurrentPosition(float *x, float *y)
 {
-    auto &s = states.Back();
+    auto &s = states.Front();
     *x = s.px;
     *y = s.py;
 }
