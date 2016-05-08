@@ -14,10 +14,12 @@ protected:
         stream.Serialize(step);
         stream.Serialize(x);
         stream.Serialize(y);
+        stream.Serialize(attack);
     }
 public:
     uint32_t step;
     float x, y;
+    bool attack;
 
     PlayerInputs();
     PlayerInputs(const PlayerInputs &other) = delete;

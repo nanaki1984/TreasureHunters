@@ -3,15 +3,30 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MallocAllocator.h"
 #include "Core/Memory/BlocksAllocator.h"
-#include "Math/Vector2.h"
-#include "Math/Math.h"
 #include "Core/Log.h"
 #include "Network/ClientInstance.h"
+#include "Network/Messages/PlayerInputs.h"
+#include "Network/Messages/PlayerState.h"
 
 using namespace Core::Memory;
 using namespace Math;
 
 namespace Game {
+
+Player::Input::Input(const SmartPtr<PlayerInputs> &playerInputs)
+: step(playerInputs->step),
+  x(playerInputs->x),
+  y(playerInputs->y),
+  attack(playerInputs->attack)
+{ }
+
+Player::State::State(const SmartPtr<PlayerState> &playerState)
+: step(playerState->step),
+  position(playerState->x, playerState->y),
+  direction(playerState->dx, playerState->dy),
+  actionState(playerState->actionState),
+  actionStep(playerState->actionStep)
+{ }
 
 DefineClassInfo(Game::Player, Core::RefCounted);
 
@@ -48,26 +63,80 @@ Player::Step(State &state, const Input &input)
 
     Vector2 v(input.x, input.y);
     float vMag = std::min(1.0f, v.Normalize());
-    if (vMag > 0.02f)
+    bool isMoving = vMag > 0.02f;
+    if (isMoving)
         v *= vMag * vMag;
     else
         v = Vector2::Zero;
 
-    state.px += v.x * 10.0f * Network::HostInstance::kFixedTimeStep;
-    state.py += v.y * 10.0f * Network::HostInstance::kFixedTimeStep;
+    switch (state.actionState)
+    {
+    case Idle:
+        if (input.attack)
+        {
+            state.actionState = Attacking;
+            state.actionStep = input.step + 1;
+
+            if (isMoving)
+                state.direction = v.GetNormalized();
+            state.position += state.direction * 10.0f * Network::HostInstance::kFixedTimeStep;
+        }
+        else if (isMoving)
+        {
+            state.actionState = Moving;
+            state.actionStep = input.step + 1;
+
+            state.position += v * 10.0f * Network::HostInstance::kFixedTimeStep;
+            state.direction = v.GetNormalized();
+        }
+        break;
+    case Moving:
+        if (input.attack)
+        {
+            state.actionState = Attacking;
+            state.actionStep = input.step + 1;
+
+            state.direction = v.GetNormalized();
+            state.position += state.direction * 10.0f * Network::HostInstance::kFixedTimeStep;
+        }
+        else if (!isMoving)
+        {
+            state.actionState = Idle;
+            state.actionStep = input.step + 1;
+        }
+        else
+        {
+            state.position += v * 10.0f * Network::HostInstance::kFixedTimeStep;
+            state.direction = v.GetNormalized();
+        }
+        break;
+    case Attacking:
+        uint32_t attackStep = (input.step + 1 - state.actionStep);
+        float speed = Math::Lerp(10.0f, 0.0f, attackStep / 30.0f);
+        state.position += state.direction * speed * Network::HostInstance::kFixedTimeStep;
+
+        if (attackStep >= 30)
+        {
+            state.actionState = Idle;
+            state.actionStep = input.step + 1;
+        }
+        break;
+    }
+
     //Core::Log::Instance()->Write(Core::Log::Info, "Player step %u -> %u", state.step, input.step + 1);
+
     state.step = input.step + 1;
 }
 
 void
-Player::SendPlayerInput(uint32_t step, float x, float y)
+Player::SendPlayerInput(const SmartPtr<PlayerInputs> &playerInputs)
 {
     assert(type != Cloned);
 
     int i = 0, c = inputs.Count();
     for (; i < c; ++i)
     {
-        if (inputs[i].step < step)
+        if (inputs[i].step < playerInputs->step)
             break;
     }
 
@@ -79,18 +148,18 @@ Player::SendPlayerInput(uint32_t step, float x, float y)
             inputs.PopBack();
     }
 
-    inputs.Insert(i, Input(step, x, y));
+    inputs.Insert(i, Input(playerInputs));
 }
 
 void
-Player::SendPlayerState(uint32_t step, float px, float py)
+Player::SendPlayerState(const SmartPtr<PlayerState> &playerState)
 {
     assert(type != SimulatedOnServer);
 
     int i = 0, c = states.Count();
     for (; i < c; ++i)
     {
-        if (states[i].step <= step)
+        if (states[i].step <= playerState->step)
             break;
     }
 
@@ -104,7 +173,7 @@ Player::SendPlayerState(uint32_t step, float px, float py)
                 states.PopBack();
         }
 
-        states.Insert(i, State(step, px, py));
+        states.Insert(i, State(playerState));
     }
     else // simulated on client, lagless
     {
@@ -113,35 +182,35 @@ Player::SendPlayerState(uint32_t step, float px, float py)
 
         if (0 == i)
         { // newer state
-            //Core::Log::Instance()->Write(Core::Log::Info, "Recv newer player state %f,%f@%u (client: %f,%f@%u)", px, py, step, s.px, s.py, s.step);
+            //Core::Log::Instance()->Write(Core::Log::Info, "Recv newer player state %f,%f@%u (client: %f,%f@%u)", playerState->x, playerState->y, playerState->step, s.position.x, s.position.y, s.step);
 
-            states.PushBack(State(step, px, py));
+            states.PushBack(State(playerState));
 
             // no lerp, just snap
             offsetX = offsetY = 0.0f;
         }
         else
         { // check old states for errors
-            Vector2 serverPos = Vector2(px, py);
-            Vector2 clientPos = Vector2(s.px, s.py);
+            Vector2 serverPos = Vector2(playerState->x, playerState->y);
+            Vector2 clientPos = s.position;
 
             float sqDist = (serverPos - clientPos).GetSqrMagnitude();
 
-            //Core::Log::Instance()->Write(Core::Log::Info, "Recv player state %f,%f@%u (client: %f,%f@%u) - sqDist: %f", px, py, step, s.px, s.py, s.step, sqDist);
+            //Core::Log::Instance()->Write(Core::Log::Info, "Recv player state %f,%f@%u (client: %f,%f@%u) - sqDist: %f", serverPos.x, serverPos.y, playerState->step, clientPos.x, clientPos.y, s.step, sqDist);
 
-            if (sqDist > 0.01f)//0.1089f)//0.25f)//0.0625f)//0.04f)//0.0025f)
+            if (sqDist > 0.0025f)//0.01f)
             {
                 // take current position
                 s = states[0];
-                float x = s.px + offsetX;
-                float y = s.py + offsetY;
+                float x = s.position.x + offsetX;
+                float y = s.position.y + offsetY;
 
                 // resimulate with inputs
-                uint32_t prevStateStep = step,
+                uint32_t prevStateStep = playerState->step,
                          newStateStep  = s.step;
 
                 states.Clear();
-                states.PushBack(State(prevStateStep, px, py));
+                states.PushBack(State(playerState));
 
                 type = SimulatedOnServer;
                 this->Update(newStateStep);
@@ -149,8 +218,8 @@ Player::SendPlayerState(uint32_t step, float px, float py)
 
                 // refresh lerp offsets
                 s = states[0];
-                offsetX = x - s.px;
-                offsetY = y - s.py;
+                offsetX = x - s.position.x;
+                offsetY = y - s.position.y;
             }
         }
     }
@@ -216,15 +285,9 @@ Player::Update(uint32_t step)
 
     if (SimulatedLagless == type)
     {
-        offsetX *= (1.0f - (Network::HostInstance::kFixedTimeStep * 12.0f));
-        offsetY *= (1.0f - (Network::HostInstance::kFixedTimeStep * 12.0f));
+        offsetX *= (1.0f - (Network::HostInstance::kFixedTimeStep * 16.0f));
+        offsetY *= (1.0f - (Network::HostInstance::kFixedTimeStep * 16.0f));
     }
-}
-
-uint32_t
-Player::GetCurrentStep() const
-{
-    return states.Front().step;
 }
 
 void
@@ -233,14 +296,30 @@ Player::GetCurrentPosition(float *x, float *y) const
     auto &s = states.Front();
     if (SimulatedLagless == type)
     {
-        *x = s.px + offsetX;
-        *y = s.py + offsetY;
+        *x = s.position.x + offsetX;
+        *y = s.position.y + offsetY;
     }
     else
     {
-        *x = s.px;
-        *y = s.py;
+        *x = s.position.x;
+        *y = s.position.y;
     }
+}
+
+void
+Player::GetCurrentDirection(float *dx, float *dy) const
+{
+    auto &s = states.Front();
+    *dx = s.direction.x;
+    *dy = s.direction.y;
+}
+
+void
+Player::GetCurrentState(ActionState *state, float *time) const
+{
+    auto &s = states.Front();
+    *state = s.actionState;
+    *time = (s.step - s.actionStep) * Network::HostInstance::kFixedTimeStep;
 }
 
 void
@@ -255,15 +334,15 @@ Player::GetPositionAtTime(float t, float *x, float *y) const
 
     if (-1 == i)
     { // too new
-        *x = states[0].px;
-        *y = states[0].py;
+        *x = states[0].position.x;
+        *y = states[0].position.y;
     }
     else
     {
         if (i == last)
         { // too old
-            *x = states[i].px;
-            *y = states[i].py;
+            *x = states[i].position.x;
+            *y = states[i].position.y;
         }
         else
         {
@@ -274,8 +353,8 @@ Player::GetPositionAtTime(float t, float *x, float *y) const
                   t1 = s1.step * Network::HostInstance::kFixedTimeStep,
                   u  = (t - t0) / (t1 - t0);
 
-            *x = Math::Lerp(s0.px, s1.px, u);
-            *y = Math::Lerp(s0.py, s1.py, u);
+            *x = Math::Lerp(s0.position.x, s1.position.x, u);
+            *y = Math::Lerp(s0.position.y, s1.position.y, u);
         }
     }
 
@@ -284,6 +363,19 @@ Player::GetPositionAtTime(float t, float *x, float *y) const
         *x += offsetX;
         *y += offsetY;
     }
+}
+
+void
+Player::FillPlayerState(const SmartPtr<PlayerState> &playerState)
+{
+    auto &s = states.Front();
+    playerState->step = s.step;
+    playerState->x = s.position.x;
+    playerState->y = s.position.y;
+    playerState->dx = s.direction.x;
+    playerState->dy = s.direction.y;
+    playerState->actionState = s.actionState;
+    playerState->actionStep = s.actionStep;
 }
 
 } // namespace Game

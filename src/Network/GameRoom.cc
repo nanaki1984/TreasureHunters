@@ -156,7 +156,7 @@ GameRoom::RecvPlayerInputs(ENetPeer *peer, const SmartPtr<Messages::PlayerInputs
 {
     int32_t playerId = peers.IndexOf(peer);
     if (playerId > -1)
-        level->GetPlayer(playerId)->SendPlayerInput(playerInputs->step, playerInputs->x, playerInputs->y);
+        level->GetPlayer(playerId)->SendPlayerInput(playerInputs);
 }
 
 bool
@@ -194,8 +194,8 @@ GameRoom::Update()
 
             auto playerState = SmartPtr<Messages::PlayerState>::MakeNew<ScratchAllocator>();
             playerState->id = playerId;
-            playerState->step = (*it)->GetCurrentStep();
-            (*it)->GetCurrentPosition(&playerState->x, &playerState->y);
+
+            (*it)->FillPlayerState(playerState);
 
             ServerInstance::Instance()->Broadcast(peers, SmartPtr<Serializable>::CastFrom(playerState), HostInstance::Unsequenced, 0);
         }

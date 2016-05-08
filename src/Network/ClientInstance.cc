@@ -151,8 +151,7 @@ ClientInstance::Tick()
                     {
                         auto playerState = SmartPtr<Messages::PlayerState>::CastFrom(ptr);
 
-                        auto player = level->GetPlayer(playerState->id);
-                        player->SendPlayerState(playerState->step, playerState->x, playerState->y);
+                        level->GetPlayer(playerState->id)->SendPlayerState(playerState);
                     }
                 }
                 else if (ptr->IsInstanceOf<Messages::EnemyState>())
@@ -161,8 +160,7 @@ ClientInstance::Tick()
                     {
                         auto enemyState = SmartPtr<Messages::EnemyState>::CastFrom(ptr);
 
-                        auto enemy = level->GetEnemy(enemyState->id);
-                        enemy->SendEnemyState(enemyState->step, enemyState->x, enemyState->y);
+                        level->GetEnemy(enemyState->id)->SendEnemyState(enemyState);
                     }
                 }
             }
@@ -323,23 +321,31 @@ ClientInstance::Send(const SmartPtr<Serializable> &object, MessageType messageTy
 }
 
 void
-ClientInstance::SendPlayerInputs(float x, float y)
+ClientInstance::SendPlayerInputs(float x, float y, bool attack)
 {
-    level->GetPlayer(playerId)->SendPlayerInput(simStep, x, y);
-
     auto playerInputs = SmartPtr<Messages::PlayerInputs>::MakeNew<ScratchAllocator>();
     playerInputs->step = simStep;
     playerInputs->x = x;
     playerInputs->y = y;
+    playerInputs->attack = attack;
+
+    level->GetPlayer(playerId)->SendPlayerInput(playerInputs);
 
     this->Send(SmartPtr<Serializable>::CastFrom(playerInputs), Unsequenced, 0);
 }
 
 void
-ClientInstance::GetPlayerPosition(float *x, float *y)
+ClientInstance::GetPlayerState(float *x, float *y, float *dx, float *dy, int32_t *state, float *time)
 {
     if (level.IsValid())
-        level->GetPlayer(playerId)->GetCurrentPosition(x, y);
+    {
+        auto &player = level->GetPlayer(playerId);
+        player->GetCurrentPosition(x, y);
+        player->GetCurrentDirection(dx, dy);
+        Game::Player::ActionState _state;
+        player->GetCurrentState(&_state, time);
+        *state = _state;
+    }
 }
 
 void

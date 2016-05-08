@@ -49,7 +49,7 @@ Enemy::Step(State &state)
     }
 
     toWaypoint /= sqrtf(sqDist);
-    newPos += (toWaypoint * 7.5f * Network::HostInstance::kFixedTimeStep);
+    newPos += (toWaypoint * 2.5f * Network::HostInstance::kFixedTimeStep);
 
     state.px = newPos.x;
     state.py = newPos.y;
@@ -58,14 +58,14 @@ Enemy::Step(State &state)
 }
 
 void
-Enemy::SendEnemyState(uint32_t step, float px, float py)
+Enemy::SendEnemyState(const SmartPtr<EnemyState> &enemyState)
 {
     assert(type != SimulatedOnServer);
 
     int i = 0, c = states.Count();
     for (; i < c; ++i)
     {
-        if (states[i].step < step)
+        if (states[i].step < enemyState->step)
             break;
     }
 
@@ -77,7 +77,7 @@ Enemy::SendEnemyState(uint32_t step, float px, float py)
             states.PopBack();
     }
 
-    states.Insert(i, State(step, px, py));
+    states.Insert(i, State(enemyState->step, enemyState->x, enemyState->y));
 }
 
 void

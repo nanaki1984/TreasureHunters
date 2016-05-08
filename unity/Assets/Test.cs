@@ -32,9 +32,9 @@ public class Test : MonoBehaviour {
     [DllImport("THShared")]
     public static extern void GameStart(StartGameCallback callback);
     [DllImport("THShared")]
-    public static extern void GameSendInput(float x, float y);
+    public static extern void GameSendInput(float x, float y, bool attack);
     [DllImport("THShared")]
-    public static extern void GameReceivePosition(out float x, out float y);
+    public static extern void GameReceiveState(out float x, out float y, out float dx, out float dy, out int state, out float time);
     [DllImport("THShared")]
     public static extern void GameReceiveEnemyPosition(out float x, out float y);
     [DllImport("THShared")]
@@ -116,14 +116,14 @@ public class Test : MonoBehaviour {
 
         if (isPlaying)
         {
-            GameSendInput(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+            GameSendInput(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"), Input.GetKey(KeyCode.X));
 
             GameTick();
 
-            float x, y;
-            GameReceivePosition(out x, out y);
-            //cube.position = new Vector3(x, .0f, y);
-            player.SetPosition(x, y);
+            float x, y, dx, dy, t;
+            int state;
+            GameReceiveState(out x, out y, out dx, out dy, out state, out t);
+            player.SetState(x, y, dx, dy, (Player.State)state, t);
 
             GameReceiveEnemyPosition(out x, out y);
             enemy.position = new Vector3(x, .0f, y);

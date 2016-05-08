@@ -3,10 +3,12 @@
 #include "Core/RefCounted.h"
 #include "Core/Collections/Array_type.h"
 #include "Math/Vector2.h"
+#include "Network/Messages/EnemyState.h"
 
 namespace Game {
 
 using Core::Collections::Array;
+using Network::Messages::EnemyState;
 
 class Enemy : public Core::RefCounted {
     DeclareClassInfo;
@@ -50,7 +52,7 @@ public:
 
     Enemy& operator =(const Enemy &other) = delete;
 
-    void SendEnemyState(uint32_t step, float px, float py);
+    void SendEnemyState(const SmartPtr<EnemyState> &enemyState);
 
     void Update(uint32_t step);
 

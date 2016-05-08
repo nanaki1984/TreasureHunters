@@ -4,6 +4,7 @@
 #include "enet/enet.h"
 
 #include "Core/IO/BitStream.h"
+#include "Math/Math.h"
 
 namespace Network {
 
@@ -78,6 +79,28 @@ public:
 
             for (uint32_t i = 0; i < size; ++i)
                 stream << array[i];
+
+            return true;
+        }
+    }
+
+    bool SerializeHalfFloat(float &value)
+    {
+        if (IsReader)
+        {
+            if (stream.RemainingBytes() >= 2)
+            {
+                uint16_t halfFloat;
+                stream >> halfFloat;
+                uint32_t valueInt = Math::HalfToFloat(halfFloat);
+                value = *(float*)&valueInt;
+            }
+            else
+                return false;
+        }
+        else
+        {
+            stream << Math::FloatToHalf(*(uint32_t*)&value);
 
             return true;
         }

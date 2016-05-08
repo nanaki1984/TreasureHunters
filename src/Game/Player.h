@@ -1,11 +1,23 @@
 #pragma once
 
 #include "Core/RefCounted.h"
+#include "Core/SmartPtr.h"
 #include "Core/Collections/Array_type.h"
+#include "Math/Math.h"
+#include "Math/Vector2.h"
+
+namespace Network {
+    namespace Messages {
+        class PlayerInputs;
+        class PlayerState;
+    }
+}
 
 namespace Game {
 
 using Core::Collections::Array;
+using Network::Messages::PlayerInputs;
+using Network::Messages::PlayerState;
 
 class Player : public Core::RefCounted {
     DeclareClassInfo;
@@ -17,30 +29,45 @@ public:
         Cloned                  // client - other players
     };
 
+    enum ActionState
+    {
+        Idle = 0,
+        Moving,
+        Attacking
+    };
+
     struct Input
     {
         uint32_t step;
         float x, y;
+        bool attack;
 
         Input()
         { }
 
-        Input(uint32_t _step, float _x, float _y)
-        : step(_step), x(_x), y(_y)
-        { }
+        explicit Input(const SmartPtr<PlayerInputs> &playerInputs);
     };
 
     struct State
     {
         uint32_t step;
-        float px, py;
+        Math::Vector2 position;
+        Math::Vector2 direction;
+        ActionState actionState;
+        uint32_t actionStep;
 
         State()
         { }
 
         State(uint32_t _step, float _px, float _py)
-        : step(_step), px(_px), py(_py)
+        : step(_step),
+          position(_px, _py),
+          direction(0.0f, 1.0f),
+          actionState(Idle),
+          actionStep(_step)
         { }
+
+        explicit State(const SmartPtr<PlayerState> &playerState);
     };
 
     struct NetData
@@ -65,17 +92,20 @@ public:
 
     Player& operator =(const Player &other) = delete;
 
-    void SendPlayerInput(uint32_t step, float x, float y);
-    void SendPlayerState(uint32_t step, float px, float py);
+    void SendPlayerInput(const SmartPtr<PlayerInputs> &playerInputs);
+    void SendPlayerState(const SmartPtr<PlayerState> &playerState);
 
     void Update(uint32_t step);
 
     Type GetType() const;
     bool HasChanged() const;
 
-    uint32_t GetCurrentStep() const;
     void GetCurrentPosition(float *x, float *y) const;
+    void GetCurrentDirection(float *dx, float *dy) const;
+    void GetCurrentState(ActionState *state, float *time) const;
     void GetPositionAtTime(float t, float *x, float *y) const;
+
+    void FillPlayerState(const SmartPtr<PlayerState> &playerState);
 };
 
 inline Player::Type

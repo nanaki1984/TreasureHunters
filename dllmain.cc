@@ -83,14 +83,14 @@ extern "C"
         clientInstance->StartGame(callback);
     }
 
-    void EXPORT_API GameSendInput(float x, float y)
+    void EXPORT_API GameSendInput(float x, float y, bool attack)
     {
-        clientInstance->SendPlayerInputs(x, y);
+        clientInstance->SendPlayerInputs(x, y, attack);
     }
 
-    void EXPORT_API GameReceivePosition(float *x, float *y)
+    void EXPORT_API GameReceiveState(float *x, float *y, float *dx, float *dy, int *state, float *time)
     {
-        clientInstance->GetPlayerPosition(x, y);
+        clientInstance->GetPlayerState(x, y, dx, dy, state, time);
     }
 
     void EXPORT_API GameReceiveEnemyPosition(float *x, float *y)
