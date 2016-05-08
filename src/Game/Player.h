@@ -70,6 +70,21 @@ public:
         explicit State(const SmartPtr<PlayerState> &playerState);
     };
 
+    struct AttackFrame
+    {
+        uint32_t step;
+        float velocity;
+    };
+
+    struct AttackData
+    {
+        uint32_t framesLen;
+        float startVel;
+        Array<AttackFrame> frames;
+        uint32_t hitFrameStart;
+        uint32_t hitFrameEnd;
+    };
+
     struct NetData
     {
         float startX, startY;

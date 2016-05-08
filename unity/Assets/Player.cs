@@ -59,7 +59,7 @@ public class Player : MonoBehaviour
             case State.Attacking:
                 anim.Play("Attack", PlayMode.StopAll);
                 anim["Attack"].speed = 0.0f;
-                anim["Attack"].normalizedTime = time / 0.24f;
+                anim["Attack"].normalizedTime = time / 0.646f;
                 break;
         }
     }
