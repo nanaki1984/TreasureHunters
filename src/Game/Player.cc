@@ -64,10 +64,6 @@ Player::Step(State &state, const Input &input)
     Vector2 v(input.x, input.y);
     float vMag = std::min(1.0f, v.Normalize());
     bool isMoving = vMag > 0.02f;
-    if (isMoving)
-        v *= vMag * vMag;
-    else
-        v = Vector2::Zero;
 
     switch (state.actionState)
     {
@@ -78,7 +74,8 @@ Player::Step(State &state, const Input &input)
             state.actionStep = input.step + 1;
 
             if (isMoving)
-                state.direction = v.GetNormalized();
+                state.direction = v;
+
             state.position += state.direction * 10.0f * Network::HostInstance::kFixedTimeStep;
         }
         else if (isMoving)
@@ -86,8 +83,8 @@ Player::Step(State &state, const Input &input)
             state.actionState = Moving;
             state.actionStep = input.step + 1;
 
-            state.position += v * 10.0f * Network::HostInstance::kFixedTimeStep;
-            state.direction = v.GetNormalized();
+            state.position += v * vMag * vMag * 10.0f * Network::HostInstance::kFixedTimeStep;
+            state.direction = v;
         }
         break;
     case Moving:
@@ -96,7 +93,9 @@ Player::Step(State &state, const Input &input)
             state.actionState = Attacking;
             state.actionStep = input.step + 1;
 
-            state.direction = v.GetNormalized();
+            if (isMoving)
+                state.direction = v;
+
             state.position += state.direction * 10.0f * Network::HostInstance::kFixedTimeStep;
         }
         else if (!isMoving)
@@ -106,8 +105,8 @@ Player::Step(State &state, const Input &input)
         }
         else
         {
-            state.position += v * 10.0f * Network::HostInstance::kFixedTimeStep;
-            state.direction = v.GetNormalized();
+            state.position += v * vMag * vMag * 10.0f * Network::HostInstance::kFixedTimeStep;
+            state.direction = v;
         }
         break;
     case Attacking:
@@ -323,7 +322,7 @@ Player::GetCurrentState(ActionState *state, float *time) const
 }
 
 void
-Player::GetPositionAtTime(float t, float *x, float *y) const
+Player::GetStateAtTime(float t, float *x, float *y, float *dx, float *dy, ActionState *state, float *time) const
 {
     int last = states.Count() - 1, i = last;
 
@@ -332,36 +331,47 @@ Player::GetPositionAtTime(float t, float *x, float *y) const
     while (i >= 0 && states[i].step < s)
         --i;
 
-    if (-1 == i)
-    { // too new
-        *x = states[0].position.x;
-        *y = states[0].position.y;
+    if (-1 == i) // too new
+    {
+        auto &s0 = states[0];
+
+        *x     = s0.position.x;
+        *y     = s0.position.y;
+        *dx    = s0.direction.x;
+        *dy    = s0.direction.y;
+        *state = s0.actionState;
+        *time  = (s0.step - s0.actionStep) * Network::HostInstance::kFixedTimeStep; // ToDo: fix?
+    }
+    else if (last == i) // too old
+    {
+        auto &s1 = states[last];
+
+        *x     = s1.position.x;
+        *y     = s1.position.y;
+        *dx    = s1.direction.x;
+        *dy    = s1.direction.y;
+        *state = s1.actionState;
+        *time  = (s1.step - s1.actionStep) * Network::HostInstance::kFixedTimeStep; // ToDo: fix?
     }
     else
     {
-        if (i == last)
-        { // too old
-            *x = states[i].position.x;
-            *y = states[i].position.y;
-        }
-        else
-        {
-            auto &s0 = states[i + 1],
-                 &s1 = states[i];
+        auto &s0 = states[i + 1],
+             &s1 = states[i];
 
-            float t0 = s0.step * Network::HostInstance::kFixedTimeStep,
-                  t1 = s1.step * Network::HostInstance::kFixedTimeStep,
-                  u  = (t - t0) / (t1 - t0);
+        float t0 = s0.step * Network::HostInstance::kFixedTimeStep,
+              t1 = s1.step * Network::HostInstance::kFixedTimeStep,
+              u  = (t - t0) / (t1 - t0);
 
-            *x = Math::Lerp(s0.position.x, s1.position.x, u);
-            *y = Math::Lerp(s0.position.y, s1.position.y, u);
-        }
-    }
+        float a0 = atan2f(s0.direction.y, s0.direction.x),
+              a1 = atan2f(s1.direction.y, s1.direction.x),
+              a  = Math::AngleLerp(a0, a1, u);
 
-    if (SimulatedLagless == type)
-    {
-        *x += offsetX;
-        *y += offsetY;
+        *x     = Math::Lerp(s0.position.x, s1.position.x, u);
+        *y     = Math::Lerp(s0.position.y, s1.position.y, u);
+        *dx    = cosf(a);
+        *dy    = sinf(a);
+        *state = s0.actionState;
+        *time  = (s0.step - s1.actionStep) * Network::HostInstance::kFixedTimeStep + (t - t0);
     }
 }
 

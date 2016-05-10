@@ -118,7 +118,8 @@ public:
     void GetCurrentPosition(float *x, float *y) const;
     void GetCurrentDirection(float *dx, float *dy) const;
     void GetCurrentState(ActionState *state, float *time) const;
-    void GetPositionAtTime(float t, float *x, float *y) const;
+
+    void GetStateAtTime(float t, float *x, float *y, float *dx, float *dy, ActionState *state, float *time) const;
 
     void FillPlayerState(const SmartPtr<PlayerState> &playerState);
 };

@@ -335,16 +335,25 @@ ClientInstance::SendPlayerInputs(float x, float y, bool attack)
 }
 
 void
-ClientInstance::GetPlayerState(float *x, float *y, float *dx, float *dy, int32_t *state, float *time)
+ClientInstance::GetPlayerState(uint8_t id, float *x, float *y, float *dx, float *dy, int32_t *state, float *time)
 {
     if (level.IsValid())
     {
-        auto &player = level->GetPlayer(playerId);
-        player->GetCurrentPosition(x, y);
-        player->GetCurrentDirection(dx, dy);
-        Game::Player::ActionState _state;
-        player->GetCurrentState(&_state, time);
-        *state = _state;
+        auto &player = level->GetPlayer(id);
+        if (id == playerId)
+        {
+            player->GetCurrentPosition(x, y);
+            player->GetCurrentDirection(dx, dy);
+            Game::Player::ActionState _state;
+            player->GetCurrentState(&_state, time);
+            *state = _state;
+        }
+        else
+        {
+            Game::Player::ActionState _state;
+            player->GetStateAtTime(simTime - 0.2f, x, y, dx, dy, &_state, time);
+            *state = _state;
+        }
     }
 }
 

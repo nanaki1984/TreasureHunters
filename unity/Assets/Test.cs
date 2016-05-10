@@ -34,7 +34,7 @@ public class Test : MonoBehaviour {
     [DllImport("THShared")]
     public static extern void GameSendInput(float x, float y, bool attack);
     [DllImport("THShared")]
-    public static extern void GameReceiveState(out float x, out float y, out float dx, out float dy, out int state, out float time);
+    public static extern void GameReceiveState(byte id, out float x, out float y, out float dx, out float dy, out int state, out float time);
     [DllImport("THShared")]
     public static extern void GameReceiveEnemyPosition(out float x, out float y);
     [DllImport("THShared")]
@@ -72,46 +72,12 @@ public class Test : MonoBehaviour {
 
     void Update()
     {
-        bool isPlaying = false;
         int gameState = GameGetState();
+        bool isPlaying = (4 == gameState);
         if (gameState > 0)
         {
             if (Input.GetKeyDown(KeyCode.S))
                 Debug.Log("RTT: " + GameGetRTT());
-        }
-        switch (gameState)
-        {
-            case 0: // disconnected
-                break;
-            case 1: // connected
-                if (Input.GetKeyDown(KeyCode.A))
-                    GameCreateRoom(1, (roomId) =>
-                    {
-                        Debug.Log("CreateRoom said " + roomId);
-                        if (roomId != 0xffffffff)
-                        {
-                            GameJoinRoom(roomId, (success) =>
-                            {
-                                Debug.Log("JoinRoom said " + success);
-                            });
-                        }
-                    });
-                break;
-            case 2: // joined room
-                if (Input.GetKeyDown(KeyCode.A))
-                {
-                    Debug.Log("Starting game...");
-                    GameStart((success) =>
-                    {
-                        Debug.Log("StartGame said " + success);
-                    });
-                }
-                break;
-            case 3: // waiting
-                break;
-            case 4: // playing
-                isPlaying = true;
-                break;
         }
 
         if (isPlaying)
@@ -122,7 +88,7 @@ public class Test : MonoBehaviour {
 
             float x, y, dx, dy, t;
             int state;
-            GameReceiveState(out x, out y, out dx, out dy, out state, out t);
+            GameReceiveState(0, out x, out y, out dx, out dy, out state, out t);
             player.SetState(x, y, dx, dy, (Player.State)state, t);
 
             GameReceiveEnemyPosition(out x, out y);
@@ -160,5 +126,54 @@ public class Test : MonoBehaviour {
 #if !UNITY_EDITOR
         GameUnloadLibrary();
 #endif
+    }
+
+    int playersCount = 1;
+    int joinRoomId = 0;
+    void OnGUI()
+    {
+        int gameState = GameGetState();
+        GUILayout.BeginVertical();
+        switch (gameState)
+        {
+            case 1:
+                GUILayout.BeginHorizontal(GUILayout.Width(400));
+                GUILayout.Label("Players count: ");
+                playersCount = int.Parse(GUILayout.TextField(playersCount.ToString()));
+                if (GUILayout.Button("Create and join room"))
+                    GameCreateRoom((byte)playersCount, (roomId) =>
+                    {
+                        Debug.Log("CreateRoom said " + roomId);
+                        if (roomId != 0xffffffff)
+                        {
+                            GameJoinRoom(roomId, (success) =>
+                            {
+                                Debug.Log("JoinRoom said " + success);
+                            });
+                        }
+                    });
+                GUILayout.EndHorizontal();
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Join room id: ");
+                joinRoomId = int.Parse(GUILayout.TextField(joinRoomId.ToString()));
+                if (GUILayout.Button("Join room"))
+                    GameJoinRoom((uint)joinRoomId, (success) =>
+                    {
+                        Debug.Log("JoinRoom said " + success);
+                    });
+                GUILayout.EndHorizontal();
+                break;
+            case 2:
+                GUILayout.BeginHorizontal(GUILayout.Width(400));
+                if (GUILayout.Button("Start game"))
+                    GameStart((success) =>
+                    {
+                        Debug.Log("StartGame said " + success);
+                    });
+                GUILayout.EndHorizontal();
+                // ToDo: leave room/disconnect
+                break;
+        }
+        GUILayout.EndVertical();
     }
 }

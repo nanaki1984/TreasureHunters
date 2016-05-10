@@ -75,7 +75,7 @@ public:
     float GetRTT() const;
 
     void SendPlayerInputs(float x, float y, bool attack);
-    void GetPlayerState(float *x, float *y, float *dx, float *dy, int32_t *state, float *time);
+    void GetPlayerState(uint8_t id, float *x, float *y, float *dx, float *dy, int32_t *state, float *time);
     void GetEnemyPosition(uint8_t enemyId, float *x, float *y);
 
     static ClientInstance* Instance();

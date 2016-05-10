@@ -37,6 +37,7 @@ unsigned short FloatToHalf(unsigned int i);
 float Clamp(float value, float min, float max);
 float Clamp01(float value);
 float Lerp(float a, float b, float t);
+float AngleLerp(float a, float b, float t);
 
 uint32_t MixHashCodes(uint32_t hash0, uint32_t hash1);
 

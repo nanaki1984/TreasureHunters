@@ -88,9 +88,9 @@ extern "C"
         clientInstance->SendPlayerInputs(x, y, attack);
     }
 
-    void EXPORT_API GameReceiveState(float *x, float *y, float *dx, float *dy, int *state, float *time)
+    void EXPORT_API GameReceiveState(uint8_t id, float *x, float *y, float *dx, float *dy, int *state, float *time)
     {
-        clientInstance->GetPlayerState(x, y, dx, dy, state, time);
+        clientInstance->GetPlayerState(id, x, y, dx, dy, state, time);
     }
 
     void EXPORT_API GameReceiveEnemyPosition(float *x, float *y)

@@ -178,6 +178,16 @@ float Lerp(float a, float b, float t)
     return a + (b - a) * Clamp01(t);
 }
 
+float AngleLerp(float a, float b, float t)
+{
+    float arc = b - a;
+    if (arc > Pi)
+        arc -= TwoPi;
+    else if (arc < -Pi)
+        arc += TwoPi;
+    return a + arc * Clamp01(t);
+}
+
 uint32_t
 MixHashCodes(uint32_t hash0, uint32_t hash1)
 {
