@@ -73,6 +73,7 @@ public:
     uint8_t GetRoomId() const;
     uint8_t GetPlayerId() const;
     float GetRTT() const;
+    uint8_t GetPlayersCount() const;
 
     void SendPlayerInputs(float x, float y, bool attack);
     void GetPlayerState(uint8_t id, float *x, float *y, float *dx, float *dy, int32_t *state, float *time);
@@ -106,6 +107,15 @@ ClientInstance::GetRTT() const
 {
     assert(state > Disconnected);
     return server->roundTripTime * 0.001f;
+}
+
+inline uint8_t
+ClientInstance::GetPlayersCount() const
+{
+    if (joinedRoomData.IsValid())
+        return joinedRoomData->playersData.Count();
+    else
+        return 0;
 }
 
 inline ClientInstance*

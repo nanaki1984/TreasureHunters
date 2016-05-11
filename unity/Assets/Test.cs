@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System;
 
@@ -24,6 +25,8 @@ public class Test : MonoBehaviour {
     [DllImport("THShared")]
     public static extern float GameGetRTT();
     [DllImport("THShared")]
+    public static extern byte GameGetRoomId();
+    [DllImport("THShared")]
     public static extern void GameTick();
     [DllImport("THShared")]
     public static extern void GameCreateRoom(byte playersCount, RoomCreationCallback callback);
@@ -33,6 +36,8 @@ public class Test : MonoBehaviour {
     public static extern void GameStart(StartGameCallback callback);
     [DllImport("THShared")]
     public static extern void GameSendInput(float x, float y, bool attack);
+    [DllImport("THShared")]
+    public static extern byte GameGetPlayersCount();
     [DllImport("THShared")]
     public static extern void GameReceiveState(byte id, out float x, out float y, out float dx, out float dy, out int state, out float time);
     [DllImport("THShared")]
@@ -44,9 +49,12 @@ public class Test : MonoBehaviour {
     [DllImport("THShared")]
     public static extern void GameQuit();
 
-    public Player player;
+    public Player playerPrefab;
     public Transform enemy;
+
     protected bool paused = false;
+
+    protected List<Player> players = new List<Player>();
 
     void Awake()
     {
@@ -88,8 +96,12 @@ public class Test : MonoBehaviour {
 
             float x, y, dx, dy, t;
             int state;
-            GameReceiveState(0, out x, out y, out dx, out dy, out state, out t);
-            player.SetState(x, y, dx, dy, (Player.State)state, t);
+
+            for (int i = 0, c = players.Count; i < c; ++i)
+            {
+                GameReceiveState((byte)i, out x, out y, out dx, out dy, out state, out t);
+                players[i].SetState(x, y, dx, dy, (Player.State)state, t);
+            }
 
             GameReceiveEnemyPosition(out x, out y);
             enemy.position = new Vector3(x, .0f, y);
@@ -149,6 +161,13 @@ public class Test : MonoBehaviour {
                             GameJoinRoom(roomId, (success) =>
                             {
                                 Debug.Log("JoinRoom said " + success);
+                                for (int i = players.Count - 1; i >= 0; ++i)
+                                {
+                                    GameObject.Destroy(players[i].gameObject);
+                                    players.RemoveAt(i);
+                                }
+                                for (int i = 0, c = GameGetPlayersCount(); i < c; ++i)
+                                    players.Add(Player.Instantiate(playerPrefab));
                             });
                         }
                     });
@@ -160,11 +179,19 @@ public class Test : MonoBehaviour {
                     GameJoinRoom((uint)joinRoomId, (success) =>
                     {
                         Debug.Log("JoinRoom said " + success);
+                        for (int i = players.Count - 1; i >= 0; ++i)
+                        {
+                            GameObject.Destroy(players[i].gameObject);
+                            players.RemoveAt(i);
+                        }
+                        for (int i = 0, c = GameGetPlayersCount(); i < c; ++i)
+                            players.Add(Player.Instantiate(playerPrefab));
                     });
                 GUILayout.EndHorizontal();
                 break;
             case 2:
                 GUILayout.BeginHorizontal(GUILayout.Width(400));
+                GUILayout.Label("Joined room id: " + GameGetRoomId());
                 if (GUILayout.Button("Start game"))
                     GameStart((success) =>
                     {

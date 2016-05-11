@@ -63,6 +63,11 @@ extern "C"
         return clientInstance->GetRTT();
     }
 
+    uint8_t EXPORT_API GameGetRoomId()
+    {
+        return clientInstance->GetRoomId();
+    }
+
     void EXPORT_API GameTick()
     {
         clientInstance->Tick();
@@ -86,6 +91,11 @@ extern "C"
     void EXPORT_API GameSendInput(float x, float y, bool attack)
     {
         clientInstance->SendPlayerInputs(x, y, attack);
+    }
+
+    uint8_t EXPORT_API GameGetPlayersCount()
+    {
+        return clientInstance->GetPlayersCount();
     }
 
     void EXPORT_API GameReceiveState(uint8_t id, float *x, float *y, float *dx, float *dy, int *state, float *time)
