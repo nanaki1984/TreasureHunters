@@ -114,6 +114,11 @@ Player::Step(State &state, const Input &input)
         float speed = Math::Lerp(10.0f, 0.0f, attackStep / 30.0f);
         state.position += state.direction * speed * Network::HostInstance::kFixedTimeStep;
 
+        if (15 == attackStep)
+        {
+
+        }
+
         if (attackStep >= 30)
         {
             state.actionState = Idle;

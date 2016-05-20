@@ -3,8 +3,11 @@
 #include "Core/Memory/MallocAllocator.h"
 #include "Core/Memory/BlocksAllocator.h"
 #include "Core/Collections/Array.h"
+#include "Math/Math.h"
+#include "Math/Vector2.h"
 
 using namespace Core::Memory;
+using namespace Math;
 
 namespace Game {
 
@@ -72,6 +75,28 @@ Level::Update(uint32_t simStep)
     auto enmIt = enemies.Begin(), enmEnd = enemies.End();
     for (; enmIt != enmEnd; ++enmIt)
         (*enmIt)->Update(simStep);
+}
+
+void
+Level::GetEnemiesInRange(float t, float x, float y, float angle, float radius, float coneAngle, Array<SmartPtr<Enemy>> &list) const
+{
+    Vector2 p(x, y);
+    auto enmIt = enemies.Begin(), enmEnd = enemies.End();
+    for (; enmIt != enmEnd; ++enmIt)
+    {
+        Vector2 enmPos;
+        (*enmIt)->GetPositionAtTime(t, &p.x, &p.y);
+
+        Vector2 toEnemy = enmPos - p;
+        float dist = toEnemy.Normalize();
+
+        if (dist <= radius)
+        {
+            float aDiff = atan2f(toEnemy.y, toEnemy.x) - angle;
+            if (std::abs(aDiff) <= coneAngle)
+                list.PushBack((*enmIt));
+        }
+    }
 }
 
 } // namespace Game

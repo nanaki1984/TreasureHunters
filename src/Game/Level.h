@@ -33,6 +33,8 @@ public:
     const SmartPtr<Enemy>& GetEnemy(uint8_t enemyId) const;
     const SmartPtr<Enemy>* EnemiesBegin() const;
     const SmartPtr<Enemy>* EnemiesEnd() const;
+
+    void GetEnemiesInRange(float t, float x, float y, float angle, float radius, float coneAngle, Array<SmartPtr<Enemy>> &list) const;
 };
 
 inline const SmartPtr<Player>&
