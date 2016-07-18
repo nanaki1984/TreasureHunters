@@ -35,6 +35,8 @@ public:
     const SmartPtr<Enemy>* EnemiesEnd() const;
 
     void GetEnemiesInRange(float t, float x, float y, float angle, float radius, float coneAngle, Array<SmartPtr<Enemy>> &list) const;
+
+    void EnqueueAttack(const SmartPtr<Player> &attacker, uint32_t simStep, const Player::AttackHitData &hitData);
 };
 
 inline const SmartPtr<Player>&
